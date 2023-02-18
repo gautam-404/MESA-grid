@@ -1,0 +1,2 @@
+numpy
+git+https://github.com/gautam-404/MESA-controller.git
