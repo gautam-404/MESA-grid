@@ -1,0 +1,9 @@
+gridwork/*
+grid_archive/*
+histories1/*
+histories2/*
+
+
+**/.DS_Store
+.vscode/*
+__pycache__/
