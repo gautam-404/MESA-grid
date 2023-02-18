@@ -13,9 +13,8 @@ from rich import print, progress, prompt, live, console, panel
 
 import helper
 
-def progress_columns(n):
-    progress_columns = (#progress.TextColumn(helper.scrap_age(n)),
-                progress.SpinnerColumn(),
+def progress_columns():
+    progress_columns = (progress.SpinnerColumn(),
                 progress.TextColumn("[progress.description]{task.description}"),
                 progress.BarColumn(bar_width=60),
                 progress.MofNCompleteColumn(),
@@ -25,7 +24,7 @@ def progress_columns(n):
 
 def live_display(n):
     ## Progress bar
-    progressbar = progress.Progress(*progress_columns(n), disable=False)
+    progressbar = progress.Progress(*progress_columns(), disable=False)
     group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
     return live.Live(group), progressbar, group
 
@@ -33,7 +32,7 @@ def update_live_display(live_disp, progressbar, group, n, stop=False):
     try:
         while True:
             group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
-            time.sleep(0.3)
+            time.sleep(0.1)
             live_disp.update(group, refresh=True)
             if stop is True:
                 break
@@ -44,6 +43,7 @@ def update_live_display(live_disp, progressbar, group, n, stop=False):
     
 def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=True, 
             save_model=False, logging=True, loadInlists=False, parallel=False):
+    print(mass, metallicity)
     ## Create working directory
     name = f"gridwork/work_{model}"
     proj = ProjectOps(name)     
@@ -126,8 +126,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
 
 
 
-def run_grid(parallel=False, show_progress=False, create_grid=True, rotation=True, save_model=True, 
-            loadInlists=False, logging=True, overwrite=None, testrun=False):
+def init_grid(testrun=False, create_grid=True):
     if testrun:
         masses = [1.36, 1.36, 1.36, 1.36, 1.36, 1.36]
         metallicities = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
@@ -145,12 +144,21 @@ def run_grid(parallel=False, show_progress=False, create_grid=True, rotation=Tru
 
         else:
             ## Load grid
-            arr = np.genfromtxt("coarse_age_map.csv",
+            arr = np.genfromtxt("./templates/coarse_age_map.csv",
                             delimiter=",", dtype=str, skip_header=1)
             masses = arr[:,0].astype(float)
             metallicities = arr[:,1].astype(float)
             coarse_age_list = [age*1E6 if age != 0 else 20*1E6 for age in arr[:,2].astype(float)]
             v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
+    return masses, metallicities, coarse_age_list, v_surf_init_list
+
+
+
+
+def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True,
+            rotation=True, save_model=True, loadInlists=False, logging=True, overwrite=None):
+    ## Initialize grid
+    masses, metallicities, coarse_age_list, v_surf_init_list = init_grid(testrun=testrun, create_grid=create_grid)
 
     ## Create archive directories
     if os.path.exists("grid_archive"):
@@ -176,42 +184,44 @@ def run_grid(parallel=False, show_progress=False, create_grid=True, rotation=Tru
     os.mkdir("grid_archive/histories")
     os.mkdir("grid_archive/profiles")
     os.mkdir("grid_archive/gyre")
-
     ## Create work directory
     if os.path.exists("gridwork"):
         shutil.rmtree("gridwork")
     os.mkdir("gridwork")
 
-
     ## Run grid ##
     if parallel:
         ## Run grid in parallel
         ## OMP_NUM_THREADS x n_processes = Total cores available
-        n_processes = -(-os.cpu_count() // int(os.environ['OMP_NUM_THREADS']))  ## Gives best performance
-        n_processes -= 2
-
-
-        live_disp, progressbar, group = live_display(n_processes)
-        with live_disp:
-            length = len(masses)
-            task = progressbar.add_task("[b i green]Running...", total=length)
-            args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
-                    range(length), repeat(rotation), repeat(save_model), 
-                    repeat(logging), repeat(loadInlists), repeat(parallel))
-            try:
-                stop_thread = False
-                thread = threading.Thread(target=update_live_display, 
-                            args=(live_disp, progressbar, group, n_processes, lambda : stop_thread,))
-                thread.start()
-                with mp.Pool(n_processes, initializer=helper.mute) as pool:
-                    for proc in pool.istarmap(evo_star, args):
-                        progressbar.advance(task)
-                stop_thread = True
-                thread.join()
-            except KeyboardInterrupt:
-                os.system("echo && echo KeyboardInterrupt && echo")
-                os._exit(1)
-                
+        n_processes = -(-os.cpu_count() // int(os.environ['OMP_NUM_THREADS']))  ## round up
+        n_processes -= 3   ## leave some breathing room
+        length = len(masses)
+        args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
+                        range(length), repeat(rotation), repeat(save_model), 
+                        repeat(logging), repeat(loadInlists), repeat(parallel))
+        if show_progress:
+            live_disp, progressbar, group = live_display(n_processes)
+            with live_disp:
+                task = progressbar.add_task("[b i green]Running...", total=length)
+                try:
+                    stop_thread = False
+                    thread = threading.Thread(target=update_live_display, 
+                                args=(live_disp, progressbar, group, n_processes, lambda : stop_thread,))
+                    thread.start()
+                    with mp.Pool(n_processes, initializer=helper.mute) as pool:
+                        for proc in pool.istarmap(evo_star, args):
+                            progressbar.advance(task)
+                    stop_thread = True
+                    thread.join()
+                except KeyboardInterrupt:
+                    os.system("echo && echo KeyboardInterrupt && echo")
+                    os._exit(1)
+        else:
+            with progress.Progress(*progress_columns()) as progressbar,\
+                 mp.Pool(n_processes, initializer=helper.mute) as pool:
+                task = progressbar.add_task("[b i green]Running...", total=length)
+                for proc in pool.istarmap(evo_star, args):
+                    progressbar.advance(task)
     else:
         # Run grid in serial
         model = 1
@@ -219,15 +229,15 @@ def run_grid(parallel=False, show_progress=False, create_grid=True, rotation=Tru
             print(f"[b i yellow]Running model {model} of {len(masses)}")
             evo_star(mass, metallicity, coarse_age, v_surf_init, model=model, 
                         rotation=rotation, save_model=save_model, logging=logging, loadInlists=loadInlists)
-
             model += 1
             print(f"[b i green]Done with model {model-1} of {len(masses)}")
             # os.system("clear")
 
+
 ## Main script
 if __name__ == "__main__":
-    # run_grid()
-    run_grid(parallel=True, show_progress=True, save_model=True, overwrite=True, testrun=False)
+    # run grid
+    run_grid(parallel=True, overwrite=True)
 
     
 
