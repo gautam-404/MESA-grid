@@ -42,13 +42,13 @@ def update_live_display(live_disp, progressbar, group, n, stop=False):
 
     
 def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=True, 
-            save_model=False, logging=True, loadInlists=False, parallel=False):
+            save_model=False, logging=True, loadInlists=False, parallel=False, silent=False):
     print(mass, metallicity)
     ## Create working directory
     name = f"gridwork/work_{model}"
     proj = ProjectOps(name)     
     proj.create(overwrite=True) 
-    proj.make()
+    proj.make(silent=silent)
     star = MesaAccess(name)
     star.load_HistoryColumns("./templates/history_columns.list")
     star.load_ProfileColumns("./templates/profile_columns.list")
@@ -198,7 +198,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         length = len(masses)
         args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
                         range(length), repeat(rotation), repeat(save_model), 
-                        repeat(logging), repeat(loadInlists), repeat(parallel))
+                        repeat(logging), repeat(loadInlists), repeat(parallel), repeat(silent=True))
         if show_progress:
             live_disp, progressbar, group = live_display(n_processes)
             with live_disp:
