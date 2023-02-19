@@ -243,7 +243,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=False, overwrite=True)
+    run_grid(parallel=True, overwrite=True)
 
     
 
