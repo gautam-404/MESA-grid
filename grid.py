@@ -142,7 +142,7 @@ def init_grid(testrun=False, create_grid=True):
             metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init))      ## repeat for each mass and v_init
             masses = np.tile(np.repeat(sample_masses, len(sample_v_init)), len(sample_metallicities))   ## repeat for each v_init and Z
             v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities))     ## tile for each mass and Z
-            
+
             coarse_age_list = 1E6 * np.ones(len(masses))               ## 1E6 yr
         else:
             ## Load grid
@@ -200,7 +200,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         length = len(masses)
         args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
                         range(length), repeat(rotation), repeat(save_model), 
-                        repeat(logging), repeat(loadInlists), repeat(parallel), repeat(silent=True))
+                        repeat(logging), repeat(loadInlists), repeat(parallel), repeat(True))
         if show_progress:
             live_disp, progressbar, group = live_display(n_processes)
             with live_disp:
