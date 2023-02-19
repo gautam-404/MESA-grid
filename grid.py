@@ -43,7 +43,7 @@ def update_live_display(live_disp, progressbar, group, n, stop=False):
     
 def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=True, 
             save_model=False, logging=True, loadInlists=False, parallel=False, silent=False):
-    print(mass, metallicity)
+    print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     name = f"gridwork/work_{model}"
     proj = ProjectOps(name)     
@@ -139,9 +139,12 @@ def init_grid(testrun=False, create_grid=True):
             sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
             sample_v_init = np.arange(2, 20, 2)                        ## 2 - 18 km/s (2 km/s step)
 
-            metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init))      ## repeat for each mass and v_init
-            masses = np.tile(np.repeat(sample_masses, len(sample_v_init)), len(sample_metallicities))   ## repeat for each v_init and Z
-            v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities))     ## tile for each mass and Z
+            ## Metallicities: repeat from sample_metallicities for each mass and v_init
+            metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init)).astype(float)      
+            ## Masses: repeat from sample_masses for each Z and v_init
+            masses = np.tile(np.repeat(sample_masses, len(sample_v_init)), len(sample_metallicities)).astype(float)    
+            ## v_init: repeat from sample_v_init for each mass and Z
+            v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float)      
 
             coarse_age_list = 1E6 * np.ones(len(masses))               ## 1E6 yr
         else:
@@ -240,7 +243,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=True, overwrite=True)
+    run_grid(parallel=False, overwrite=True)
 
     
 
