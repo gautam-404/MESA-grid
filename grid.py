@@ -146,7 +146,7 @@ def init_grid(testrun=False, create_grid=True):
             ## v_init: repeat from sample_v_init for each mass and Z
             v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float)      
 
-            coarse_age_list = 1E6 * np.ones(len(masses))               ## 1E6 yr
+            coarse_age_list = 1E6 * np.ones(len(masses)).astype(float)               ## 1E6 yr
         else:
             ## Load grid
             arr = np.genfromtxt("./templates/coarse_age_map.csv",
