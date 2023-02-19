@@ -56,7 +56,7 @@ def phases_params(initial_mass, Zinit):
                     'change_net' : True, 'new_net_name' : 'pp_and_cno_extras.net',  
                     'change_initial_net' : False, 'adjust_abundances_for_new_isos' : True,
                     'set_rates_preference' : True, 'new_rates_preference' : 2,
-                    'show_net_species_info' : True, 'show_net_reactions_info' : True,
+                    'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'relax_mass' : True, 'lg_max_abs_mdot' : 6, 'new_mass' : initial_mass,
                     'max_model_number': 1, 'max_timestep' : 3.15e13,
                     'delta_lgTeff_limit' : 0.005, 'delta_lgTeff_hard_limit' : 0.01,
@@ -64,7 +64,7 @@ def phases_params(initial_mass, Zinit):
                     'okay_to_reduce_gradT_excess' : True, 'scale_max_correction' : 0.1},
                     
                     'Pre-Main Sequence' :
-                    {'change_initial_net' : False, 'show_net_species_info' : True, 'show_net_reactions_info' : True,
+                    {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'max_years_for_timestep' : 1.3e4, 'max_model_number': -1,
                     'delta_lgTeff_limit' : 0.005, 'delta_lgTeff_hard_limit' : 0.01,
                     'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
@@ -72,21 +72,21 @@ def phases_params(initial_mass, Zinit):
                     'relax_dlnZ' : 5.0e-3, 'relax_dY' : 1.0e-2},
 
                     'Hi-Res Evolution' :
-                    {'change_initial_net' : False, 'show_net_species_info' : True, 'show_net_reactions_info' : True,
+                    {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'max_years_for_timestep' : 1.25e4, 'max_model_number': -1,
                     'delta_lgTeff_limit' : 0.005, 'delta_lgTeff_hard_limit' : 0.01,
                     'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
                     'write_header_frequency': 10, 'history_interval': 15, 'terminal_interval': 15, 'profile_interval': 15},
 
                     'Low-Res Evolution' :
-                    {'change_initial_net' : False, 'show_net_species_info' : True, 'show_net_reactions_info' : True,
+                    {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'max_years_for_timestep' : 0.75e6, 'max_model_number': -1,
                     'delta_lgTeff_limit' : 0.00015, 'delta_lgTeff_hard_limit' : 0.0015,
                     'delta_lgL_limit' : 0.0005, 'delta_lgL_hard_limit' : 0.005,
                     'write_header_frequency': 4, 'history_interval': 4, 'terminal_interval': 4, 'profile_interval': 4},
 
                     'Late Main Sequence Evolution' :
-                    {'change_initial_net' : False, 'show_net_species_info' : True, 'show_net_reactions_info' : True,
+                    {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'max_years_for_timestep' : 1e8, 'max_model_number': -1,
                     'delta_lgTeff_limit' : 0.0006, 'delta_lgTeff_hard_limit' : 0.006,
                     'delta_lgL_limit' : 0.002, 'delta_lgL_hard_limit' : 0.02,
@@ -126,8 +126,8 @@ def scrap_age(n):
                     age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
                 else:
                     age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
-                text += f"[b][i]Model[/i] [magenta]{i+1}[/magenta] [yellow]----->[/yellow] {age_str}\n"
+                text += f"[b][i]Model[/i] [magenta]{i}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
-            text += f"[b][i]Model[/i] [magenta]{i+1}[/magenta] [yellow]----->[/yellow] Running...\n"
+            text += f"[b][i]Model[/i] [magenta]{i}[/magenta] [yellow]----->[/yellow] Running...\n"
     # print(text)
     return text
