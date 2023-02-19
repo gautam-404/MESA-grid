@@ -137,8 +137,10 @@ def init_grid(testrun=False, create_grid=True):
             ## Create grid
             sample_masses = np.arange(1.36, 2.22, 0.02)                ## 1.36 - 2.20 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
-            masses = np.repeat(sample_masses, len(sample_metallicities))
-            metallicities = np.tile(sample_metallicities, len(sample_masses))
+            metallicities = np.repeat(sample_metallicities, len(sample_masses))
+            masses = np.tile(sample_masses, len(sample_metallicities))
+            # masses = np.repeat(sample_masses, len(sample_metallicities))
+            # metallicities = np.tile(sample_metallicities, len(sample_masses))
             coarse_age_list = 1E6 * np.ones(len(masses))               ## 1E6 yr
             v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
 
@@ -234,7 +236,8 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
             # os.system("clear")
 
 
-## Main script
+
+
 if __name__ == "__main__":
     # run grid
     run_grid(parallel=True, overwrite=True)
