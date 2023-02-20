@@ -137,7 +137,7 @@ def init_grid(testrun=False, create_grid=True):
             ## Create grid
             sample_masses = np.arange(1.36, 2.22, 0.02)                ## 1.36 - 2.20 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
-            sample_v_init = np.arange(2, 20, 2)                        ## 2 - 18 km/s (2 km/s step)
+            sample_v_init = np.append(0.2, np.arange(2, 20, 2))                        ## 0.2 and 2 - 18 km/s (2 km/s step)
 
             ## Metallicities: repeat from sample_metallicities for each mass and v_init
             metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init)).astype(float)      
