@@ -2,7 +2,7 @@ import glob
 import multiprocessing as mp
 import threading
 import time
-import os, sys
+import os
 import shutil
 import tarfile
 from itertools import repeat
@@ -259,8 +259,17 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
+    parallel = True
+    if parallel:
+        os.environ['OMP_NUM_THREADS'] = "8"     
+        ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes
+        
+        ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance
+    else:
+        os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores
+
     # run grid
-    run_grid(parallel=True, overwrite=True, testrun="grid")
+    run_grid(parallel=parallel, overwrite=True, testrun="grid")
 
     
 
