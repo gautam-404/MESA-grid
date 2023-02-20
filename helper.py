@@ -101,7 +101,7 @@ def mute():
 def unmute():
     sys.stdout = sys.__stdout__
 
-def process_outline(outline):
+def process_outline(outline, age):
     try:
         keyword1 = outline.split()[-1]
         keyword2 = outline.split()[-2] + " " + outline.split()[-1]
@@ -109,35 +109,35 @@ def process_outline(outline):
         if keyword1 in dt_limit_values or keyword2 in dt_limit_values or keyword3 in dt_limit_values:
             return float(outline.split()[0])
         else:
-            return None
+            return age
     except:
-        return None
+        return age
 
 def scrap_age(n):
     text = "\n"
     logfiles = glob.glob("gridwork/work_*/run.log")
     for i in range(n):
-        logfile = logfiles[i]
-        num = logfile.split("/")[-2].split("_")[-1]
-        age = None
-        old_age = 0
+        try:
+            logfile = logfiles[i]
+            num = int(logfile.split("/")[-2].split("_")[-1])
+        except:
+            logfile = ""
+            num = i
+        age = 0
         if os.path.exists(logfile):
             with open(logfile, "r") as f:
                 for outline in f:
-                    age = process_outline(outline)
-        if age is not None:
-            if age != old_age:
-                old_age = age
-                if age < 1/365:
-                    age_str = f"[b]Age: [cyan]{age*365*24:.4f}[/cyan] hours"
-                elif 1/365 < age < 1:
-                    age_str = f"[b]Age: [cyan]{age*365:.4f}[/cyan] days"
-                elif 1 < age < 1000:
-                    age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
-                else:
-                    age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
-                text += f"[b][i]Model[/i] [magenta]{num+1}[/magenta] [yellow]----->[/yellow] {age_str}\n"
+                    age = process_outline(outline, age)
+        if age > 0:
+            if age < 1/365:
+                age_str = f"[b]Age: [cyan]{age*365*24:.4f}[/cyan] hours"
+            elif 1/365 < age < 1:
+                age_str = f"[b]Age: [cyan]{age*365:.4f}[/cyan] days"
+            elif 1 < age < 1000:
+                age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
+            else:
+                age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
+            text += f"[b][i]Model[/i] [magenta]{num+1}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
             text += f"[b][i]Model[/i] [magenta]{num+1}[/magenta] [yellow]----->[/yellow] Running...\n"
-    # print(text)
     return text
