@@ -130,26 +130,35 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
 
 
 
-def init_grid(testrun=False, create_grid=True):
-    if testrun:
-        masses = [1.7]
-        metallicities = [0.017]
-        coarse_age_list = [1E6]
-        v_surf_init_list = [0.05]
+def init_grid(testrun=None, create_grid=True):
+    def get_grid(sample_masses, sample_metallicities, sample_v_init):
+        ## Metallicities: repeat from sample_metallicities for each mass and v_init
+        metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init)).astype(float)      
+        ## Masses: repeat from sample_masses for each Z and v_init
+        masses = np.tile(np.repeat(sample_masses, len(sample_v_init)), len(sample_metallicities)).astype(float)    
+        ## v_init: repeat from sample_v_init for each mass and Z
+        v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float) 
+        return masses, metallicities, v_surf_init_list
+
+    if testrun is not None:
+        if testrun == "single":
+            masses = [1.7]
+            metallicities = [0.017]
+            coarse_age_list = [1E6]
+            v_surf_init_list = [0.05]
+        if testrun == "grid":
+            sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
+            sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
+            sample_v_init = np.append(0.2, np.arange(2, 20, 2))        ## 0.2 and 2 - 18 km/s (2 km/s step)
+            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
+            coarse_age_list = 1E6 * np.ones(len(masses)).astype(float)               ## 1E6 yr
     else:
         if create_grid:
             ## Create grid
             sample_masses = np.arange(1.36, 2.22, 0.02)                ## 1.36 - 2.20 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
             sample_v_init = np.append(0.2, np.arange(2, 20, 2))                        ## 0.2 and 2 - 18 km/s (2 km/s step)
-
-            ## Metallicities: repeat from sample_metallicities for each mass and v_init
-            metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init)).astype(float)      
-            ## Masses: repeat from sample_masses for each Z and v_init
-            masses = np.tile(np.repeat(sample_masses, len(sample_v_init)), len(sample_metallicities)).astype(float)    
-            ## v_init: repeat from sample_v_init for each mass and Z
-            v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float)      
-
+            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)   
             coarse_age_list = 1E6 * np.ones(len(masses)).astype(float)               ## 1E6 yr
         else:
             ## Load grid
@@ -247,7 +256,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=False, overwrite=True, testrun=True)
+    run_grid(parallel=False, overwrite=True, testrun="grid")
 
     
 
