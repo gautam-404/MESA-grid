@@ -93,9 +93,9 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 if rotation:
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
-                proj.run(logging=logging)
+                proj.run(logging=logging, parallel=parallel)
             else:
-                proj.resume(logging=logging)
+                proj.resume(logging=logging, parallel=parallel)
         except (ValueError, FileNotFoundError) as e:
             continue_forwards = False
             print(e)
@@ -125,6 +125,8 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
             compressed_file = f"grid_archive/models/model_{model}.tar.gz"
             with tarfile.open(compressed_file,"w:gz") as tarhandle:
                 tarhandle.add(name, arcname=os.path.basename(name))
+        shutil.rmtree(name)
+    else:
         shutil.rmtree(name)
 
 
@@ -170,7 +172,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         ## Run grid in parallel
         ## OMP_NUM_THREADS x n_processes = Total cores available
         n_processes = -(-os.cpu_count() // int(os.environ['OMP_NUM_THREADS']))  ## round up
-        n_processes -= 3   ## leave some breathing room
+        n_processes -= 1   ## leave some breathing room
         length = len(masses)
         args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
                         range(length), repeat(rotation), repeat(save_model), 
@@ -256,7 +258,7 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=False, overwrite=True, testrun="grid")
+    run_grid(parallel=True, overwrite=True, testrun="grid")
 
     
 
