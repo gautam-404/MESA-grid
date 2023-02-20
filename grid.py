@@ -95,11 +95,14 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 proj.run(logging=logging)
             else:
                 proj.resume(logging=logging)
-        except (KeyboardInterrupt, ValueError, Exception, FileNotFoundError) as e:
-            if e == Exception:
-                raise Exception("Failed in phase: ", phase_name)
-            else:
-                raise e
+        except (ValueError, FileNotFoundError) as e:
+            print(e)
+            break
+        except Exception:
+            print("Failed in phase: ", phase_name)
+            break
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
 
     # Run GYRE
     proj = ProjectOps(name)
