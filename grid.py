@@ -127,7 +127,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 tarhandle.add(name, arcname=os.path.basename(name))
         shutil.rmtree(name)
     else:
-        # exit()        ## Exit if run fails, for debugging
+        shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
         shutil.rmtree(name)
 
 
@@ -163,6 +163,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
     os.mkdir("grid_archive/histories")
     os.mkdir("grid_archive/profiles")
     os.mkdir("grid_archive/gyre")
+    os.mkdir("grid_archive/failed")
     ## Create work directory
     if os.path.exists("gridwork"):
         shutil.rmtree("gridwork")
@@ -259,7 +260,7 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=True, overwrite=True, testrun="grid")
+    run_grid(parallel=False, overwrite=True, testrun="grid")
 
     
 
