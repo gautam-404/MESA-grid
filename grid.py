@@ -132,10 +132,10 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
 
 def init_grid(testrun=False, create_grid=True):
     if testrun:
-        masses = [1.36, 1.36, 1.36, 1.36, 1.36, 1.36]
-        metallicities = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
-        coarse_age_list = [1E6, 1E6, 1E6, 1E6, 1E6, 1E6]
-        v_surf_init_list = [0.1, 1, 5, 10, 15, 20]
+        masses = [1.7]
+        metallicities = [0.017]
+        coarse_age_list = [1E6]
+        v_surf_init_list = [0.05]
     else:
         if create_grid:
             ## Create grid
