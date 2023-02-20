@@ -77,6 +77,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
 
 
     inlist_template = "./templates/inlist_template"
+    continue_forwards = True
     for phase_name in phases_params.keys():
         try:
             if loadInlists:         ## Run from pre-made inlists
@@ -85,9 +86,9 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 star.load_InlistProject(inlist_template)
                 star.set(phases_params[phase_name], force=True)
             print(phase_name)
-            star.set('initial_mass', initial_mass)
-            star.set('initial_z', Zinit)
-            star.set('max_age', phase_max_age.pop(0))
+            star.set('initial_mass', initial_mass, force=True)
+            star.set('initial_z', Zinit, force=True)
+            star.set('max_age', phase_max_age.pop(0), force=True)
             if phase_name == "Initial Contraction":
                 if rotation:
                     ## Initiate rotation
@@ -96,31 +97,35 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
             else:
                 proj.resume(logging=logging)
         except (ValueError, FileNotFoundError) as e:
+            continue_forwards = False
             print(e)
             break
-        except Exception:
-            print(f"[ired]{phase_name} run failed. Check run log for details.")
+        except Exception as e:
+            continue_forwards = False
+            print(e)
+            print(f"[i red]{phase_name} run failed. Check run log for details.")
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
 
-    # Run GYRE
-    proj = ProjectOps(name)
-    proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=False)
-    # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=False)
-    # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=False)
+    if continue_forwards:
+        # Run GYRE
+        proj = ProjectOps(name)
+        proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=False)
+        # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=False)
+        # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=False)
 
-    ## Archive LOGS
-    os.mkdir(f"grid_archive/gyre/freqs_{model}")
-    shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
-    shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
-    for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
-        shutil.copy(file, f"grid_archive/gyre/freqs_{model}")
-    if save_model:
-        compressed_file = f"grid_archive/models/model_{model}.tar.gz"
-        with tarfile.open(compressed_file,"w:gz") as tarhandle:
-            tarhandle.add(name, arcname=os.path.basename(name))
-    shutil.rmtree(name)
+        ## Archive LOGS
+        os.mkdir(f"grid_archive/gyre/freqs_{model}")
+        shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
+        shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
+        for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
+            shutil.copy(file, f"grid_archive/gyre/freqs_{model}")
+        if save_model:
+            compressed_file = f"grid_archive/models/model_{model}.tar.gz"
+            with tarfile.open(compressed_file,"w:gz") as tarhandle:
+                tarhandle.add(name, arcname=os.path.basename(name))
+        shutil.rmtree(name)
 
 
 
@@ -242,7 +247,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=True, overwrite=True)
+    run_grid(parallel=False, overwrite=True)
 
     
 

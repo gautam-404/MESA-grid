@@ -123,7 +123,7 @@
 
 	! Convergence checking
 	use_gold_tolerances = .true.
-	use_dedt_form_of_energy_eqn = .true.
+	!use_dedt_form_of_energy_eqn = .true.		!! Not a prameter in MESA r22.11.1
 
 
 / ! end of controls namelist
