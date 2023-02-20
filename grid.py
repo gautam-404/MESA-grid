@@ -259,7 +259,7 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = True
+    parallel = False
     if parallel:
         os.environ['OMP_NUM_THREADS'] = "8"     
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes
