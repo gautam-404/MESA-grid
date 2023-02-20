@@ -55,7 +55,7 @@ def phases_params(initial_mass, Zinit):
                     'set_uniform_initial_composition' : True, 'initial_zfracs' : 6,
                     'change_net' : True, 'new_net_name' : 'pp_and_cno_extras.net',  
                     'change_initial_net' : False, 'adjust_abundances_for_new_isos' : True,
-                    'set_rates_preference' : True, 'new_rates_preference' : 2,
+                    # 'set_rates_preference' : True, 'new_rates_preference' : 2,  ## MESA-r22.11.1 does not have these parameters
                     'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'relax_mass' : True, 'lg_max_abs_mdot' : 6, 'new_mass' : initial_mass,
                     'max_model_number': 1, 'max_timestep' : 3.15e13,
