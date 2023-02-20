@@ -111,9 +111,9 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
     if continue_forwards:
         # Run GYRE
         proj = ProjectOps(name)
-        proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=False)
-        # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=False)
-        # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=False)
+        proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+        # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+        # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
 
         ## Archive LOGS
         os.mkdir(f"grid_archive/gyre/freqs_{model}")
@@ -174,7 +174,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         ## Run grid in parallel
         ## OMP_NUM_THREADS x n_processes = Total cores available
         n_processes = -(-os.cpu_count() // int(os.environ['OMP_NUM_THREADS']))  ## round up
-        n_processes -= 1   ## leave some breathing room
+        # n_processes -= 1   ## leave some breathing room
         length = len(masses)
         args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
                         range(length), repeat(rotation), repeat(save_model), 
@@ -260,7 +260,7 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=False, overwrite=True, testrun="grid")
+    run_grid(parallel=True, overwrite=True, testrun="grid")
 
     
 
