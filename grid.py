@@ -99,7 +99,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
             print(e)
             break
         except Exception:
-            print("Failed in phase: ", phase_name)
+            print(f"[ired]{phase_name} run failed. Check run log for details.")
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
