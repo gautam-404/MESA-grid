@@ -210,6 +210,8 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
             # os.system("clear")
 
 
+
+
 def init_grid(testrun=None, create_grid=True):
     def get_grid(sample_masses, sample_metallicities, sample_v_init):
         ## Metallicities: repeat from sample_metallicities for each mass and v_init
