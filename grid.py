@@ -127,8 +127,8 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 tarhandle.add(name, arcname=os.path.basename(name))
         shutil.rmtree(name)
     else:
-        exit()
-        # shutil.rmtree(name)
+        # exit()        ## Exit if run fails, for debugging
+        shutil.rmtree(name)
 
 
 
@@ -259,7 +259,7 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=False, overwrite=True, testrun="grid")
+    run_grid(parallel=True, overwrite=True, testrun="grid")
 
     
 
