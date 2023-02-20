@@ -75,35 +75,31 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
         templates = sorted(glob.glob("./inlists/*inlist*"))
         phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
 
-    if loadInlists:
-        ## Run MESA from pre-made inlists
-        for phase_name in phases_params.keys():
+
+    inlist_template = "./templates/inlist_template"
+    for phase_name in phases_params.keys():
+        try:
+            if loadInlists:         ## Run from pre-made inlists
+                star.load_InlistProject(templates.pop(0))
+            else:                   ## Run from inlist template by setting parameters for each phase
+                star.load_InlistProject(inlist_template)
+                star.set(phases_params[phase_name], force=True)
             print(phase_name)
-            star.load_InlistProject(templates.pop(0))
-            star.set('initial_mass', initial_mass, force=True)
-            star.set('initial_z', Zinit, force=True)
-            star.set('max_age', phase_max_age.pop(0))
-            if phase_name == "Start rotation":
-                star.set('new_surface_rotation_v', v_surf_init)
-            if phase_name == "Initial Contraction":
-                proj.run(logging=logging, parallel=parallel)
-            else:
-                proj.resume(logging=logging, parallel=parallel)
-    else:
-        ## Run MESA from inlist template by setting parameters for each phase
-        inlist_template = "./templates/inlist_template"
-        for phase_name, input_params in phases_params.items():
-            print(phase_name)
-            star.load_InlistProject(inlist_template)
-            star.set(input_params, force=True)
+            star.set('initial_mass', initial_mass)
+            star.set('initial_z', Zinit)
             star.set('max_age', phase_max_age.pop(0))
             if phase_name == "Initial Contraction":
                 if rotation:
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
-                proj.run(logging=logging, parallel=parallel)
+                proj.run(logging=logging)
             else:
-                proj.resume(logging=logging, parallel=parallel)
+                proj.resume(logging=logging)
+        except (KeyboardInterrupt, ValueError, Exception, FileNotFoundError) as e:
+            if e == Exception:
+                raise Exception("Failed in phase: ", phase_name)
+            else:
+                raise e
 
     # Run GYRE
     proj = ProjectOps(name)
