@@ -1,7 +1,7 @@
 import os
 import sys
+import glob
 
-from rich import print
 import numpy as np
 
 Y_sun_phot = 0.2485 # Asplund+2009
@@ -16,11 +16,11 @@ he3_to_he4_ratio = 1.66E-04
 dt_limit_values = ['burn steps', 'Lnuc', 'Lnuc_cat', 'Lnuc_H', 'Lnuc_He', 'lgL_power_phot', 'Lnuc_z', 'bad_X_sum',
                   'dH', 'dH/H', 'dHe', 'dHe/He', 'dHe3', 'dHe3/He3', 'dL/L', 'dX', 'dX/X', 'dX_nuc_drop', 'delta mdot',
                   'delta total J', 'delta_HR', 'delta_mstar', 'diff iters', 'diff steps', 'min_dr_div_cs', 'dt_collapse',
-                  'eps_nuc_cntr', 'error rate', 'rate', 'highT del Ye', 'hold', 'lgL', 'lgP', 'lgP_cntr', 'lgR', 'lgRho', 'lgRho_cntr',
+                  'eps_nuc_cntr', 'error rate', 'highT del Ye', 'hold', 'lgL', 'lgP', 'lgP_cntr', 'lgR', 'lgRho', 'lgRho_cntr',
                   'lgT', 'lgT_cntr', 'lgT_max', 'lgT_max_hi_T', 'lgTeff', 'dX_div_X_cntr', 'lg_XC_cntr', 'lg_XH_cntr', 
                   'lg_XHe_cntr', 'lg_XNe_cntr', 'lg_XO_cntr', 'lg_XSi_cntr', 'XC_cntr', 'XH_cntr', 'XHe_cntr', 'XNe_cntr',
                   'XO_cntr', 'XSi_cntr', 'log_eps_nuc', 'max_dt', 'neg_mass_frac', 'adjust_J_q', 'solver iters', 'rel_E_err',
-                  'varcontrol', 'max increase', 'increase', 'max decrease', 'decrease', 'retry', 'b_****']
+                  'varcontrol', 'max increase', 'max decrease', 'retry', 'b_****']
 
 def initial_abundances(Zinit):
     """
@@ -101,20 +101,30 @@ def mute():
 def unmute():
     sys.stdout = sys.__stdout__
 
+def process_outline(outline):
+    try:
+        keyword1 = outline.split()[-1]
+        keyword2 = outline.split()[-2] + " " + outline.split()[-1]
+        keyword3 = outline.split()[-3] + " " + outline.split()[-2] + " " + outline.split()[-1]
+        if keyword1 in dt_limit_values or keyword2 in dt_limit_values or keyword3 in dt_limit_values:
+            return float(outline.split()[0])
+        else:
+            return None
+    except:
+        return None
+
 def scrap_age(n):
     text = "\n"
+    logfiles = glob.glob("gridwork/work_*/run.log")
     for i in range(n):
-        logfile = f"gridwork/work_{i}/run.log"
+        logfile = logfiles[i]
+        num = logfile.split("/")[-2].split("_")[-1]
         age = None
         old_age = 0
         if os.path.exists(logfile):
             with open(logfile, "r") as f:
                 for outline in f:
-                    try:
-                        if outline.split()[-1] in dt_limit_values:
-                            age = float(outline.split()[0])
-                    except:
-                        pass
+                    age = process_outline(outline)
         if age is not None:
             if age != old_age:
                 old_age = age
@@ -126,8 +136,8 @@ def scrap_age(n):
                     age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
                 else:
                     age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
-                text += f"[b][i]Model[/i] [magenta]{i}[/magenta] [yellow]----->[/yellow] {age_str}\n"
+                text += f"[b][i]Model[/i] [magenta]{num+1}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
-            text += f"[b][i]Model[/i] [magenta]{i}[/magenta] [yellow]----->[/yellow] Running...\n"
+            text += f"[b][i]Model[/i] [magenta]{num+1}[/magenta] [yellow]----->[/yellow] Running...\n"
     # print(text)
     return text

@@ -127,7 +127,8 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 tarhandle.add(name, arcname=os.path.basename(name))
         shutil.rmtree(name)
     else:
-        shutil.rmtree(name)
+        exit()
+        # shutil.rmtree(name)
 
 
 
@@ -228,14 +229,14 @@ def init_grid(testrun=None, create_grid=True):
         if testrun == "single":
             masses = [1.7]
             metallicities = [0.017]
-            coarse_age_list = [1E6]
+            coarse_age_list = [1E7]
             v_surf_init_list = [0.05]
         if testrun == "grid":
             sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
             sample_v_init = np.append(0.2, np.arange(2, 20, 2))        ## 0.2 and 2 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
-            coarse_age_list = 1E6 * np.ones(len(masses)).astype(float)               ## 1E6 yr
+            coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               ## 1E6 yr
     else:
         if create_grid:
             ## Create grid
@@ -243,7 +244,7 @@ def init_grid(testrun=None, create_grid=True):
             sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
             sample_v_init = np.append(0.2, np.arange(2, 20, 2))                        ## 0.2 and 2 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)   
-            coarse_age_list = 1E6 * np.ones(len(masses)).astype(float)               ## 1E6 yr
+            coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               ## 1E6 yr
         else:
             ## Load grid
             arr = np.genfromtxt("./templates/coarse_age_map.csv",
@@ -258,7 +259,7 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     # run grid
-    run_grid(parallel=True, overwrite=True, testrun="grid")
+    run_grid(parallel=False, overwrite=True, testrun="grid")
 
     
 
