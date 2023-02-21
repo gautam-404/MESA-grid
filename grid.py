@@ -102,9 +102,6 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
                                 'new_surface_rotation_v': v_surf_init,
                                 'num_steps_to_relax_rotation' : 100, ## Default value is 100
                                 'set_uniform_am_nu_non_rot': True}
-        velocity_params = {'change_initial_v_flag' : False,     ## Default value is False
-                            'change_v_flag' : True,             ## Default value is False
-                            'new_v_flag' : False}               ## Default value is False
     else:
         templates = sorted(glob.glob("./urot/*inlist*"))
         phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
@@ -130,7 +127,6 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
                 if v_surf_init != 0:
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
-                    star.set(velocity_params, force=True)
                 proj.run(logging=logging, parallel=parallel)
             else:
                 proj.resume(logging=logging, parallel=parallel)
@@ -323,7 +319,7 @@ def init_grid(testrun=None, create_grid=True):
 
     if testrun is not None:
         if testrun == "single":
-            v_surf_init_list = [0.05, 0.1, 0.15, 0.2, 1, 1.5, 2]
+            v_surf_init_list = [2, 4, 6, 8, 10, 12, 14, 16, 18]
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
             coarse_age_list = [1e7]*len(v_surf_init_list)
