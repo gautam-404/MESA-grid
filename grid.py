@@ -244,7 +244,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         # n_processes -= 1   ## leave some breathing room
         length = len(masses)
         args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
-                        range(length), repeat(gyre), repeat(save_model), repeat(logging), 
+                        range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
                         repeat(loadInlists), repeat(parallel), repeat(True))
         if show_progress:
             live_disp, progressbar, group = live_display(n_processes)
