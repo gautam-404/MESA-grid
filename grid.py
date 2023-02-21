@@ -137,15 +137,12 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
 
     if continue_forwards:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            run_gyre(name, parallel=not parallel)   
+            run_gyre(dir_name=name, gyre_in= os.path.abspath("templates/gyre_rot_template_dipole.in"), parallel=not parallel)   
             ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
         
         ## Archive LOGS
-        os.mkdir(f"grid_archive/gyre/freqs_{model}")
         shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
         shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
-        for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
-            shutil.copy(file, f"grid_archive/gyre/freqs_{model}")
         if save_model:
             compressed_file = f"grid_archive/models/model_{model}.tar.gz"
             with tarfile.open(compressed_file,"w:gz") as tarhandle:
@@ -157,29 +154,36 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
         shutil.rmtree(name)
 
 
-def run_gyre(dir_name, parallel=True):
+def run_gyre(dir_name, gyre_in, parallel=True):
     '''
     Run GYRE on all models in the archive. OR run GYRE on a single model.
     Args:       
-        dir_name (str): directory name
+        dir_name (str): archive directory name
         parallel (optional, bool): whether to parallelize the evolution
     '''
-    if not os.path.exists(f"{dir_name}/models/"):
+    models_dir = f"{dir_name}/models/"
+    gyre_in = os.path.abspath(gyre_in)
+    if not os.path.exists(models_dir):
         # Run GYRE
-        proj = ProjectOps(name)
-        proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-        # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-        # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+        proj = ProjectOps(dir_name)
+        proj.runGyre(gyre_in=gyre_in, data_format="FGONG", files='all', logging=True, parallel=parallel)
     else:
-        for file in glob.glob(f"{dir_name}/models/*tar.gz"):
-            tarfile.open(file, "r:gz").extractall(path=dir_name)
-            name = file.split("/")[-1].split(".")[0]
+        os.chdir(models_dir)
+        models = sorted(glob.glob(f"*tar.gz"))
+        for model in models:
+            tarfile.open(model, "r:gz").extractall()
+            name = model.split(".")[0].replace("model", "work")
+            print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
-            proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-            # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-            # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+            proj.runGyre(gyre_in=gyre_in, data_format="FGONG", files='all', logging=True, parallel=parallel)
+
+            ## Archive GYRE output
+            os.mkdir(f"{dir_name}/gyre/freqs_{model}")
+            for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
+                shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
             shutil.rmtree(name)
+        os.chdir("../..")
         
 
 
@@ -338,16 +342,18 @@ def init_grid(testrun=None, create_grid=True):
 if __name__ == "__main__":
     parallel = True
     if parallel:
-        os.environ['OMP_NUM_THREADS'] = "8"     
+        os.environ['OMP_NUM_THREADS'] = "2"     
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes
         
         ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance
     else:
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores
 
-    # run grid
-    run_grid(parallel=parallel, overwrite=True, testrun="grid")
+    # # run grid
+    # run_grid(parallel=parallel, overwrite=True, testrun="grid")
 
+    # run gyre
+    run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
 
     
 
