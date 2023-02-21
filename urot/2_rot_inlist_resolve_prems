@@ -147,7 +147,7 @@
 
   		! Convergence checking
   		use_gold_tolerances = .true.
-  		use_dedt_form_of_energy_eqn = .true.
+  		!use_dedt_form_of_energy_eqn = .true.
 
 
 / ! end of controls namelist

@@ -37,7 +37,7 @@
 		new_net_name = 'pp_and_cno_extras.net' ! includes basic, plus some deuterium (h2) burning
 		change_initial_net = .false.
 		adjust_abundances_for_new_isos = .true. ! adds isotopes to match changes in nuc net
-		set_rates_preference = .true.
+		!set_rates_preference = .true.
 		new_rates_preference = 2 ! this uses the jina reaclib rates
 	    show_net_species_info = .false.
 	    show_net_reactions_info = .false.
@@ -162,7 +162,7 @@
 
   		! Convergence checking
   		use_gold_tolerances = .true.
-  		use_dedt_form_of_energy_eqn = .true.
+  		!use_dedt_form_of_energy_eqn = .true.
 
 
 / ! end of controls namelist
