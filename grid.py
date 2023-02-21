@@ -94,14 +94,17 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
         else:
             phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
             phases_names = phases_params.keys()
-        rotation_init_params = {'change_v_flag': True,
-                                'new_v_flag': True,
-                                'change_rotation_flag': True,
+        rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
                                 'new_rotation_flag': True,
+                                'change_initial_rotation_flag': True,
                                 'set_initial_surface_rotation_v': True,
                                 'set_surface_rotation_v': True,
                                 'new_surface_rotation_v': v_surf_init,
+                                'num_steps_to_relax_rotation' : 100, ## Default value is 100
                                 'set_uniform_am_nu_non_rot': True}
+        velocity_params = {'change_initial_v_flag' : False,     ## Default value is False
+                            'change_v_flag' : True,             ## Default value is False
+                            'new_v_flag' : False}               ## Default value is False
     else:
         templates = sorted(glob.glob("./urot/*inlist*"))
         phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
@@ -127,6 +130,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
                 if v_surf_init != 0:
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
+                    star.set(velocity_params, force=True)
                 proj.run(logging=logging, parallel=parallel)
             else:
                 proj.resume(logging=logging, parallel=parallel)
@@ -159,6 +163,8 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
         if logging:
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
         shutil.rmtree(name)
+
+
 
 
 def run_gyre(dir_name, gyre_in, parallel=True):
@@ -317,7 +323,7 @@ def init_grid(testrun=None, create_grid=True):
 
     if testrun is not None:
         if testrun == "single":
-            v_surf_init_list = [0, 0.05, 0.1, 0.15, 0.2, 1, 1.5, 2]
+            v_surf_init_list = [0.05, 0.1, 0.15, 0.2, 1, 1.5, 2]
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
             coarse_age_list = [1e7]*len(v_surf_init_list)
@@ -348,7 +354,7 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = True
+    parallel = False
     if parallel:
         os.environ['OMP_NUM_THREADS'] = "8"     
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.
@@ -357,7 +363,7 @@ if __name__ == "__main__":
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
     # run grid
-    run_grid(parallel=parallel, overwrite=True, testrun="grid")
+    run_grid(parallel=parallel, overwrite=True, testrun="single")
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")

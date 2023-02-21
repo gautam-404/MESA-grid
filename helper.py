@@ -63,10 +63,9 @@ def phases_params(initial_mass, Zinit):
                     'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
                     'okay_to_reduce_gradT_excess' : True, 'scale_max_correction' : 0.1,
                     'num_trace_history_values': 3,
-                    'trace_history_value_name(1)': 'surf_v_rot',
+                    'trace_history_value_name(1)': 'surf_avg_v_rot',
                     'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
-                    'trace_history_value_name(3)': 'log_total_angular_momentum',
-                    'trace_history_value_name(:)': ''},
+                    'trace_history_value_name(3)': 'log_total_angular_momentum'},
                     
                     'Pre-Main Sequence' :
                     {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
@@ -76,10 +75,9 @@ def phases_params(initial_mass, Zinit):
                     'write_header_frequency': 10, 'history_interval': 1, 'terminal_interval': 10, 'profile_interval': 50,
                     'relax_dlnZ' : 5.0e-3, 'relax_dY' : 1.0e-2,
                     'num_trace_history_values': 3,
-                    'trace_history_value_name(1)': 'surf_v_rot',
+                    'trace_history_value_name(1)': 'surf_avg_v_rot',
                     'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
-                    'trace_history_value_name(3)': 'log_total_angular_momentum',
-                    'trace_history_value_name(:)': ''},
+                    'trace_history_value_name(3)': 'log_total_angular_momentum'},
 
                     'Hi-Res Evolution' :
                     {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
@@ -88,10 +86,9 @@ def phases_params(initial_mass, Zinit):
                     'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
                     'write_header_frequency': 10, 'history_interval': 15, 'terminal_interval': 15, 'profile_interval': 15,
                     'num_trace_history_values': 3,
-                    'trace_history_value_name(1)': 'surf_v_rot',
+                    'trace_history_value_name(1)': 'surf_avg_v_rot',
                     'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
-                    'trace_history_value_name(3)': 'log_total_angular_momentum',
-                    'trace_history_value_name(:)': ''},
+                    'trace_history_value_name(3)': 'log_total_angular_momentum'},
 
                     'Low-Res Evolution' :
                     {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
@@ -100,10 +97,9 @@ def phases_params(initial_mass, Zinit):
                     'delta_lgL_limit' : 0.0005, 'delta_lgL_hard_limit' : 0.005,
                     'write_header_frequency': 4, 'history_interval': 4, 'terminal_interval': 4, 'profile_interval': 4,
                     'num_trace_history_values': 3,
-                    'trace_history_value_name(1)': 'surf_v_rot',
+                    'trace_history_value_name(1)': 'surf_avg_v_rot',
                     'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
-                    'trace_history_value_name(3)': 'log_total_angular_momentum',
-                    'trace_history_value_name(:)': ''},
+                    'trace_history_value_name(3)': 'log_total_angular_momentum'},
 
                     'Late Main Sequence Evolution' :
                     {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
@@ -112,10 +108,9 @@ def phases_params(initial_mass, Zinit):
                     'delta_lgL_limit' : 0.002, 'delta_lgL_hard_limit' : 0.02,
                     'write_header_frequency': 1, 'history_interval': 1, 'terminal_interval': 1, 'profile_interval': 1,
                     'num_trace_history_values': 3,
-                    'trace_history_value_name(1)': 'surf_v_rot',
+                    'trace_history_value_name(1)': 'surf_avg_v_rot',
                     'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
-                    'trace_history_value_name(3)': 'log_total_angular_momentum',
-                    'trace_history_value_name(:)': ''},
+                    'trace_history_value_name(3)': 'log_total_angular_momentum'},
     }
 
     return params

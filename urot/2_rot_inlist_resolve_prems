@@ -85,7 +85,7 @@
 
 	!# controls for output
 
-		star_history_name = 'history_.data'
+		star_history_name = 'history.data'
 
 		write_header_frequency = 10
 		photo_interval = -1
