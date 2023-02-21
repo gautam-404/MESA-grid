@@ -88,8 +88,12 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
     phases_params = helper.phases_params(initial_mass, Zinit)     
     if v_surf_init != 0:
         templates = sorted(glob.glob("./urot/*inlist*"))
-        # phase_max_age = [1.0E-3, 0.25E6, 1E6, coarse_age, 4.0E7, terminal_age]
-        phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
+        if loadInlists:
+            phase_max_age = [1.0E-3, 0.25E6, 1E6, coarse_age, 4.0E7, terminal_age]
+            phases_names = ['Initial Contraction', 'Pre-Main Sequence', 'Start Rotation', 'Hi-Res Evolution', 'Low-Res Evolution', 'Late Main Sequence Evolution']
+        else:
+            phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
+            phases_names = phases_params.keys()
         rotation_init_params = {'change_v_flag': True,
                                 'new_v_flag': True,
                                 'change_rotation_flag': True,
@@ -99,16 +103,21 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
                                 'new_surface_rotation_v': v_surf_init,
                                 'set_uniform_am_nu_non_rot': True}
     else:
-        templates = sorted(glob.glob("./inlists/*inlist*"))
+        templates = sorted(glob.glob("./urot/*inlist*"))
         phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
+        phases_names = phases_params.keys()
 
 
     inlist_template = "./templates/inlist_template"
     continue_forwards = True
-    for phase_name in phases_params.keys():
+    for phase_name in phases_names:
         try:
             if loadInlists:         ## Run from pre-made inlists
                 star.load_InlistProject(templates.pop(0))
+                if phase_name == "Start Rotation":
+                    if v_surf_init != 0:
+                        ## Initiate rotation
+                        star.set('new_surface_rotation_v', v_surf_init, force=True)
             else:                   ## Run from inlist template by setting parameters for each phase
                 star.load_InlistProject(inlist_template)
                 star.set(phases_params[phase_name], force=True)
@@ -350,7 +359,7 @@ if __name__ == "__main__":
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
     # run grid
-    run_grid(parallel=parallel, overwrite=True, testrun="single")
+    run_grid(parallel=parallel, overwrite=True, testrun="grid", loadInlists=True)
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
