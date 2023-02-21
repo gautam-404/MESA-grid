@@ -14,6 +14,7 @@ from rich import print, progress, prompt, live, console, panel
 import helper
 
 def progress_columns():
+    '''Define progress bar columns'''
     progress_columns = (progress.SpinnerColumn(),
                 progress.TextColumn("[progress.description]{task.description}"),
                 progress.BarColumn(bar_width=60),
@@ -23,12 +24,25 @@ def progress_columns():
     return progress_columns
 
 def live_display(n):
+    '''Define live display
+    Args:   n (int): number of models
+    Returns:    live_disp (rich.live.Live): live display
+                progressbar (rich.progress.Progress): progress bar
+                group (rich.console.Group): group of panels
+    '''
     ## Progress bar
     progressbar = progress.Progress(*progress_columns(), disable=False)
     group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
     return live.Live(group), progressbar, group
 
 def update_live_display(live_disp, progressbar, group, n, stop=False):
+    '''Update live display
+    Args:   live_disp (rich.live.Live): live display
+            progressbar (rich.progress.Progress): progress bar
+            group (rich.console.Group): group of panels
+            n (int): number of models
+            stop (bool): stop live display
+    '''
     try:
         while True:
             group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
@@ -41,8 +55,21 @@ def update_live_display(live_disp, progressbar, group, n, stop=False):
 
 
     
-def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=True, 
-            save_model=False, logging=True, loadInlists=False, parallel=False, silent=False):
+def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
+            save_model=True, logging=True, loadInlists=False, parallel=False, silent=False):
+    '''Evolve a star
+    Args:   mass (optional, float): mass of star in solar masses
+            metallicity (optional, float): metallicity of star
+            coarse_age (optional, float): age of star when we switch to a coarser timestep
+            v_surf_init (optional, float): initial surface rotation velocity in km/s
+            model (optional, int): model number, used by the code to name the model when parallelizing
+            gyre (optional, bool): whether to run gyre after evolution
+            save_model (optional, bool): whether to save the model
+            logging (optional, bool): whether to log the evolution
+            loadInlists (optional, bool): whether to load pre-made inlists 
+            parallel (optional, bool): whether to parallelize the evolution
+            silent (optional, bool): whether to suppress output
+    '''
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     name = f"gridwork/work_{model}"
@@ -59,7 +86,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
     ## Get Parameters
     terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
     phases_params = helper.phases_params(initial_mass, Zinit)     
-    if rotation:
+    if v_surf_init != 0:
         templates = sorted(glob.glob("./urot/*inlist*"))
         # phase_max_age = [1.0E-3, 0.25E6, 1E6, coarse_age, 4.0E7, terminal_age]
         phase_max_age = [1.0E-3, 2E6, coarse_age, 4.0E7, terminal_age]
@@ -90,7 +117,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
             star.set('initial_z', Zinit, force=True)
             star.set('max_age', phase_max_age.pop(0), force=True)
             if phase_name == "Initial Contraction":
-                if rotation:
+                if v_surf_init != 0:
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
                 proj.run(logging=logging, parallel=parallel)
@@ -109,12 +136,10 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
             raise KeyboardInterrupt
 
     if continue_forwards:
-        # Run GYRE
-        proj = ProjectOps(name)
-        proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-        # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-        # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
-
+        if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
+            run_gyre(name, parallel=not parallel)   
+            ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
+        
         ## Archive LOGS
         os.mkdir(f"grid_archive/gyre/freqs_{model}")
         shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
@@ -127,15 +152,53 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, rotation=Tru
                 tarhandle.add(name, arcname=os.path.basename(name))
         shutil.rmtree(name)
     else:
-        shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
+        if logging:
+            shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
         shutil.rmtree(name)
 
 
+def run_gyre(dir_name, parallel=True):
+    '''
+    Run GYRE on all models in the archive. OR run GYRE on a single model.
+    Args:       
+        dir_name (str): directory name
+        parallel (optional, bool): whether to parallelize the evolution
+    '''
+    if not os.path.exists(f"{dir_name}/models/"):
+        # Run GYRE
+        proj = ProjectOps(name)
+        proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+        # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+        # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+    else:
+        for file in glob.glob(f"{dir_name}/models/*tar.gz"):
+            tarfile.open(file, "r:gz").extractall(path=dir_name)
+            name = file.split("/")[-1].split(".")[0]
+            # Run GYRE
+            proj = ProjectOps(name)
+            proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+            # proj.runGyre(gyre_in="templates/gyre_rot_template_l2.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+            # proj.runGyre(gyre_in="templates/gyre_rot_template_all_modes.in", data_format="FGONG", files='all', logging=True, parallel=parallel)
+            shutil.rmtree(name)
+        
 
 
 
 def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True,
-            rotation=True, save_model=True, loadInlists=False, logging=True, overwrite=None):
+            gyre=False, save_model=True, loadInlists=False, logging=True, overwrite=None):
+    '''
+    Run the grid of models.
+    Args:
+        parallel (optional, bool): whether to parallelize the evolution
+        show_progress (optional, bool): whether to show a progress bar
+        testrun (optional, bool): whether to run a test run
+        create_grid (optional, bool): whether to create the grid
+        save_model (optional, bool): whether to save the model
+        loadInlists (optional, bool): whether to load inlists from the inlists directory
+        logging (optional, bool): whether to log the evolution
+        overwrite (optional, bool): whether to overwrite the grid_archive
+    '''
+
     ## Initialize grid
     masses, metallicities, coarse_age_list, v_surf_init_list = init_grid(testrun=testrun, create_grid=create_grid)
 
@@ -177,8 +240,8 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         # n_processes -= 1   ## leave some breathing room
         length = len(masses)
         args = zip(masses, metallicities, coarse_age_list, v_surf_init_list,
-                        range(length), repeat(rotation), repeat(save_model), 
-                        repeat(logging), repeat(loadInlists), repeat(parallel), repeat(True))
+                        range(length), repeat(gyre), repeat(save_model), repeat(logging), 
+                        repeat(loadInlists), repeat(parallel), repeat(True))
         if show_progress:
             live_disp, progressbar, group = live_display(n_processes)
             with live_disp:
@@ -207,8 +270,8 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         model = 1
         for mass, metallicity, v_surf_init, coarse_age in zip(masses, metallicities, v_surf_init_list, coarse_age_list):
             print(f"[b i yellow]Running model {model} of {len(masses)}")
-            evo_star(mass, metallicity, coarse_age, v_surf_init, model=model, 
-                        rotation=rotation, save_model=save_model, logging=logging, loadInlists=loadInlists)
+            evo_star(mass, metallicity, coarse_age, v_surf_init, model=model, gyre=gyre,
+                    save_model=save_model, logging=logging, loadInlists=loadInlists)
             model += 1
             print(f"[b i green]Done with model {model-1} of {len(masses)}")
             # os.system("clear")
@@ -217,7 +280,21 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
 
 
 def init_grid(testrun=None, create_grid=True):
+    '''
+    Initialize the grid
+    Args:   
+        testrun (optional, str): whether to make grid for a test run
+        create_grid (optional, bool): whether to create the grid from scratch
+    Returns:
+            masses (list): list of masses
+            metallicities (list): list of metallicities
+            coarse_age_list (list): list of coarse ages
+            v_surf_init_list (list): list of initial surface velocities
+    '''
     def get_grid(sample_masses, sample_metallicities, sample_v_init):
+        '''
+        Get the grid from the sample lists
+        '''
         ## Metallicities: repeat from sample_metallicities for each mass and v_init
         metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init)).astype(float)      
         ## Masses: repeat from sample_masses for each Z and v_init
@@ -259,7 +336,7 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = False
+    parallel = True
     if parallel:
         os.environ['OMP_NUM_THREADS'] = "8"     
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes
@@ -270,6 +347,7 @@ if __name__ == "__main__":
 
     # run grid
     run_grid(parallel=parallel, overwrite=True, testrun="grid")
+
 
     
 
