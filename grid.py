@@ -256,7 +256,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
                                 args=(live_disp, progressbar, group, n_processes, lambda : stop_thread,))
                     thread.start()
                     with mp.Pool(n_processes, initializer=helper.mute) as pool:
-                        for proc in pool.istarmap(evo_star, args):
+                        for proc in pool.starmap(evo_star, args):
                             progressbar.advance(task)
                     stop_thread = True
                     thread.join()
@@ -267,7 +267,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
             with progress.Progress(*progress_columns()) as progressbar,\
                  mp.Pool(n_processes, initializer=helper.mute) as pool:
                 task = progressbar.add_task("[b i green]Running...", total=length)
-                for proc in pool.istarmap(evo_star, args):
+                for proc in pool.starmap(evo_star, args):
                     progressbar.advance(task)
     else:
         # Run grid in serial
@@ -312,7 +312,7 @@ def init_grid(testrun=None, create_grid=True):
             masses = [1.7]
             metallicities = [0.017]
             coarse_age_list = [1E7]
-            v_surf_init_list = [0.05]
+            v_surf_init_list = [0]
         if testrun == "grid":
             sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
@@ -342,18 +342,17 @@ def init_grid(testrun=None, create_grid=True):
 if __name__ == "__main__":
     parallel = True
     if parallel:
-        os.environ['OMP_NUM_THREADS'] = "2"     
-        ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes
-        
-        ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance
+        os.environ['OMP_NUM_THREADS'] = "8"     
+        ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.
+        ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance.
     else:
-        os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores
+        os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
-    # # run grid
-    # run_grid(parallel=parallel, overwrite=True, testrun="grid")
+    # run grid
+    run_grid(parallel=parallel, overwrite=True, testrun="single")
 
-    # run gyre
-    run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
+    # # run gyre
+    # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
 
     
 
