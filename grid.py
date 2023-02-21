@@ -100,6 +100,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
                                 'set_initial_surface_rotation_v': True,
                                 'set_surface_rotation_v': True,
                                 'new_surface_rotation_v': v_surf_init,
+                                'relax_surface_rotation_v' : True,
                                 'num_steps_to_relax_rotation' : 100, ## Default value is 100
                                 'set_uniform_am_nu_non_rot': True}
     else:
@@ -326,7 +327,7 @@ def init_grid(testrun=None, create_grid=True):
         if testrun == "grid":
             sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
-            sample_v_init = np.append(0.2, np.arange(2, 20, 2))        ## 0.2 and 2 - 18 km/s (2 km/s step)
+            sample_v_init = np.arange(2, 20, 2)                        ## 2 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
             coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               ## 1E6 yr
     else:
@@ -350,7 +351,7 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = False
+    parallel = True
     if parallel:
         os.environ['OMP_NUM_THREADS'] = "8"     
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.

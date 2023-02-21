@@ -159,5 +159,5 @@ def scrap_age(n):
                 age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
             text += f"[b][i]Model[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
-            text += f"[b][i]Model[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Running...\n"
+            text += f"[b][i]Model[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
     return text
