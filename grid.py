@@ -35,7 +35,7 @@ def live_display(n):
     group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
     return live.Live(group), progressbar, group
 
-def update_live_display(live_disp, progressbar, group, n, stop=False):
+def update_live_display(live_disp, progressbar, group, n):
     '''Update live display
     Args:   live_disp (rich.live.Live): live display
             progressbar (rich.progress.Progress): progress bar
@@ -48,7 +48,7 @@ def update_live_display(live_disp, progressbar, group, n, stop=False):
             group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
             time.sleep(0.1)
             live_disp.update(group, refresh=True)
-            if stop is True:
+            if stop_thread is True:
                 break
     except KeyboardInterrupt:
         raise KeyboardInterrupt
@@ -251,9 +251,10 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
             with live_disp:
                 task = progressbar.add_task("[b i green]Running...", total=length)
                 try:
+                    global stop_thread
                     stop_thread = False
                     thread = threading.Thread(target=update_live_display, 
-                                args=(live_disp, progressbar, group, n_processes, lambda : stop_thread,))
+                                args=(live_disp, progressbar, group, n_processes))
                     thread.start()
                     with mp.Pool(n_processes, initializer=helper.mute) as pool:
                         for proc in pool.starmap(evo_star, args):
