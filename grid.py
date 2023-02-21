@@ -9,31 +9,10 @@ from itertools import repeat
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
-from rich import print, progress, prompt, live, console, panel
+from rich import print, progress, prompt, console, panel
 
 import helper
 
-def progress_columns():
-    '''Define progress bar columns'''
-    progress_columns = (progress.SpinnerColumn(),
-                progress.TextColumn("[progress.description]{task.description}"),
-                progress.BarColumn(bar_width=60),
-                progress.MofNCompleteColumn(),
-                progress.TaskProgressColumn(),
-                progress.TimeElapsedColumn())
-    return progress_columns
-
-def live_display(n):
-    '''Define live display
-    Args:   n (int): number of models
-    Returns:    live_disp (rich.live.Live): live display
-                progressbar (rich.progress.Progress): progress bar
-                group (rich.console.Group): group of panels
-    '''
-    ## Progress bar
-    progressbar = progress.Progress(*progress_columns(), disable=False)
-    group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
-    return live.Live(group), progressbar, group
 
 def update_live_display(live_disp, progressbar, group, n):
     '''Update live display
@@ -251,7 +230,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
                         range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
                         repeat(loadInlists), repeat(parallel), repeat(True))
         if show_progress:
-            live_disp, progressbar, group = live_display(n_processes)
+            live_disp, progressbar, group = helper.live_display(n_processes)
             with live_disp:
                 task = progressbar.add_task("[b i green]Running...", total=length)
                 try:
@@ -269,7 +248,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
                     os.system("echo && echo KeyboardInterrupt && echo")
                     os._exit(1)
         else:
-            with progress.Progress(*progress_columns()) as progressbar,\
+            with progress.Progress(*helper.progress_columns()) as progressbar,\
                  mp.Pool(n_processes, initializer=helper.mute) as pool:
                 task = progressbar.add_task("[b i green]Running...", total=length)
                 for proc in pool.starmap(evo_star, args):
@@ -341,7 +320,7 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = False
+    parallel = True
     if parallel:
         os.environ['OMP_NUM_THREADS'] = "8"     
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.

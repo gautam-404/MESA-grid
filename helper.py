@@ -3,6 +3,7 @@ import sys
 import glob
 
 import numpy as np
+from rich import progress, live, console, panel
 
 Y_sun_phot = 0.2485 # Asplund+2009
 Y_sun_bulk = 0.2703 # Asplund+2009
@@ -161,3 +162,26 @@ def scrap_age(n):
         else:
             text += f"[b][i]Model[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
     return text
+
+
+def progress_columns():
+    '''Define progress bar columns'''
+    progress_columns = (progress.SpinnerColumn(),
+                progress.TextColumn("[progress.description]{task.description}"),
+                progress.BarColumn(bar_width=60),
+                progress.MofNCompleteColumn(),
+                progress.TaskProgressColumn(),
+                progress.TimeElapsedColumn())
+    return progress_columns
+
+def live_display(n):
+    '''Define live display
+    Args:   n (int): number of models
+    Returns:    live_disp (rich.live.Live): live display
+                progressbar (rich.progress.Progress): progress bar
+                group (rich.console.Group): group of panels
+    '''
+    ## Progress bar
+    progressbar = progress.Progress(*progress_columns(), disable=False)
+    group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(scrap_age(n), expand=False))
+    return live.Live(group), progressbar, group
