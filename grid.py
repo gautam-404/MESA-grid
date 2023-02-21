@@ -329,7 +329,7 @@ def init_grid(testrun=None, create_grid=True):
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
             sample_v_init = np.arange(2, 20, 2)                        ## 2 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
-            coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               ## 1E6 yr
+            coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               
     else:
         if create_grid:
             ## Create grid
@@ -337,7 +337,7 @@ def init_grid(testrun=None, create_grid=True):
             sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
             sample_v_init = np.append(0.2, np.arange(2, 20, 2))                        ## 0.2 and 2 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)   
-            coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               ## 1E6 yr
+            coarse_age_list = 1E7 * np.ones(len(masses)).astype(float)               
         else:
             ## Load grid
             arr = np.genfromtxt("./templates/coarse_age_map.csv",
