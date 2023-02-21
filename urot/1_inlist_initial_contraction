@@ -38,7 +38,7 @@
 		change_initial_net = .false.
 		adjust_abundances_for_new_isos = .true. ! adds isotopes to match changes in nuc net
 		!set_rates_preference = .true.
-		new_rates_preference = 2 ! this uses the jina reaclib rates
+		!new_rates_preference = 2 ! this uses the jina reaclib rates
 	    show_net_species_info = .false.
 	    show_net_reactions_info = .false.
 
