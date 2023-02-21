@@ -310,10 +310,10 @@ def init_grid(testrun=None, create_grid=True):
 
     if testrun is not None:
         if testrun == "single":
-            masses = [1.7]*8
-            metallicities = [0.017]*8
-            coarse_age_list = [1e7]*8
             v_surf_init_list = [0, 0.05, 0.1, 0.15, 0.2, 1, 1.5, 2]
+            masses = [1.7]*len(v_surf_init_list)
+            metallicities = [0.017]*len(v_surf_init_list)
+            coarse_age_list = [1e7]*len(v_surf_init_list)
         if testrun == "grid":
             sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
