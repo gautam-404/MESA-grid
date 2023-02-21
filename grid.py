@@ -115,9 +115,7 @@ def evo_star(mass, metallicity, coarse_age, v_surf_init=0, model=0, gyre=False,
             if loadInlists:         ## Run from pre-made inlists
                 star.load_InlistProject(templates.pop(0))
                 if phase_name == "Start Rotation":
-                    if v_surf_init != 0:
-                        ## Initiate rotation
-                        star.set('new_surface_rotation_v', v_surf_init, force=True)
+                    continue        ## Skip the start rotation phase, because we started rotation in the contraction phase
             else:                   ## Run from inlist template by setting parameters for each phase
                 star.load_InlistProject(inlist_template)
                 star.set(phases_params[phase_name], force=True)
@@ -359,7 +357,7 @@ if __name__ == "__main__":
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
     # run grid
-    run_grid(parallel=parallel, overwrite=True, testrun="grid", loadInlists=True)
+    run_grid(parallel=parallel, overwrite=True, testrun="grid")
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
