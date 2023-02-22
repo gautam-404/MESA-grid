@@ -291,26 +291,25 @@ def init_grid(testrun=None, create_grid=True):
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
             sample_v_init = np.arange(0, 20, 2)                        ## 0 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)    
+    elif create_grid:
+        ## Create grid
+        sample_masses = np.arange(1.36, 2.22, 0.02)                ## 1.36 - 2.20 Msun (0.02 Msun step)
+        sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
+        sample_v_init = np.append(0.2, np.arange(2, 20, 2))        ## 0.2 and 2 - 18 km/s (2 km/s step)
+        masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)                
     else:
-        if create_grid:
-            ## Create grid
-            sample_masses = np.arange(1.36, 2.22, 0.02)                ## 1.36 - 2.20 Msun (0.02 Msun step)
-            sample_metallicities = np.arange(0.001, 0.0101, 0.0001)    ## 0.001 - 0.010 (0.0001 step)
-            sample_v_init = np.append(0.2, np.arange(2, 20, 2))        ## 0.2 and 2 - 18 km/s (2 km/s step)
-            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)                
-        else:
-            ## Load grid
-            arr = np.genfromtxt("./templates/coarse_age_map.csv",
-                            delimiter=",", dtype=str, skip_header=1)
-            masses = arr[:,0].astype(float)
-            metallicities = arr[:,1].astype(float)
-            v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
+        ## Load grid
+        arr = np.genfromtxt("./templates/coarse_age_map.csv",
+                        delimiter=",", dtype=str, skip_header=1)
+        masses = arr[:,0].astype(float)
+        metallicities = arr[:,1].astype(float)
+        v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
     return masses, metallicities, v_surf_init_list
 
 
 
 if __name__ == "__main__":
-    parallel = False
+    parallel = True
     if parallel:
         os.environ['OMP_NUM_THREADS'] = "8"   
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.
