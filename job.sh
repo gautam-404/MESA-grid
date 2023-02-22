@@ -9,5 +9,5 @@
 #PBS -l storage=gdata/a00+scratch/a00
 #PBS -l wd
   
-module load python3/3.11.2
+module load python3
 python3 grid.py $PBS_NCPUS > /g/data/a00/$USER/job_logs/$PBS_JOBID.log
