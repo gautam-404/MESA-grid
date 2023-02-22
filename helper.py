@@ -60,7 +60,7 @@ def phases_params(initial_mass, Zinit):
                     'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'relax_mass' : True, 'lg_max_abs_mdot' : 6, 'new_mass' : initial_mass,
                     'write_header_frequency': 10, 'history_interval': 1, 'terminal_interval': 10, 'profile_interval': 50,
-                    'max_timestep' : 1.3e4,
+                    'max_years_for_timestep' : 1.3e4,
                     'delta_lgTeff_limit' : 0.005, 'delta_lgTeff_hard_limit' : 0.01,
                     'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
                     'okay_to_reduce_gradT_excess' : True, 'scale_max_correction' : 0.1,
