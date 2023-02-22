@@ -323,7 +323,7 @@ if __name__ == "__main__":
     masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
     # run grid
-    run_grid(masses, metallicities, v_surf_init_list, parallel=parallel, show_progress=True, overwrite=True)
+    run_grid(masses, metallicities, v_surf_init_list, parallel=parallel, show_progress=False, overwrite=True)
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
