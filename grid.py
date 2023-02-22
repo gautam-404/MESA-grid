@@ -163,8 +163,8 @@ def run_gyre(dir_name, gyre_in, parallel=True):
 
 
 
-def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True,
-            gyre=False, save_model=True, logging=True, overwrite=None):
+def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progress=True, gyre=False, 
+            save_model=True, logging=True, overwrite=None):
     '''
     Run the grid of models.
     Args:
@@ -176,9 +176,6 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         logging (optional, bool): whether to log the evolution
         overwrite (optional, bool): whether to overwrite the grid_archive
     '''
-
-    ## Initialize grid
-    masses, metallicities, v_surf_init_list = init_grid(testrun=testrun, create_grid=create_grid)
 
     ## Create archive directories
     if os.path.exists("grid_archive"):
@@ -309,16 +306,24 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = True
+    parallel = False
     if parallel:
-        os.environ['OMP_NUM_THREADS'] = "8"   
-        ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.
         ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance.
+        os.environ['OMP_NUM_THREADS'] = "16"  
+        omp_threads = int(os.environ['OMP_NUM_THREADS'])
+        ### For "normal" queue
+        ### AVAILABLE: [48 cores per node] 2 x 24-core Intel Xeon Platinum 8274 (Cascade Lake) 3.2 GHz CPUs per node 
+        ### Each core has 2 threads, so total 96 threads per node. OMP_NUM_THREADS = 16 runs 6 processes per node.
+        ### USES: 8 cores per process. Requires about grid_length*8 cores to run the whole grid in parallel. 
+        ### Each process consumes less than 2GB of memory, so 6 processes would need about 12GB of memory.
     else:
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
+    ## Initialize grid
+    masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
+
     # run grid
-    run_grid(parallel=parallel, overwrite=True, testrun="grid")
+    run_grid(masses, metallicities, v_surf_init_list, parallel=parallel, show_progress=True, overwrite=True)
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
