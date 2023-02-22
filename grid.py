@@ -25,7 +25,7 @@ def update_live_display(live_disp, progressbar, group, n):
     try:
         while True:
             group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
-            time.sleep(0.1)
+            time.sleep(0.2)
             live_disp.update(group, refresh=True)
             if stop_thread is True:
                 break
@@ -35,7 +35,7 @@ def update_live_display(live_disp, progressbar, group, n):
 
     
 def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
-            save_model=True, logging=True, loadInlists=False, parallel=False, silent=False):
+            save_model=True, logging=True, parallel=False, silent=False):
     '''Evolve a star
     Args:   mass (optional, float): mass of star in solar masses
             metallicity (optional, float): metallicity of star
@@ -44,7 +44,6 @@ def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
             gyre (optional, bool): whether to run gyre after evolution
             save_model (optional, bool): whether to save the model
             logging (optional, bool): whether to log the evolution
-            loadInlists (optional, bool): whether to load pre-made inlists 
             parallel (optional, bool): whether to parallelize the evolution
             silent (optional, bool): whether to suppress output
     '''
@@ -65,13 +64,8 @@ def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
     terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
     phases_params = helper.phases_params(initial_mass, Zinit)     
 
-    urot_inlists = sorted(glob.glob("./urot/*inlist*"))
-    if loadInlists:
-        phase_max_age = [1.0E-3, 0.25E6, 1E6, 1E7, 4.0E7, terminal_age]
-        phases_names = ['Initial Contraction', 'Pre-Main Sequence', 'Start Rotation', 'Hi-Res Evolution', 'Low-Res Evolution', 'Late Main Sequence Evolution']
-    else:
-        phase_max_age = [1.0E-3, 2E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
-        phases_names = phases_params.keys()
+    phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
+    phases_names = phases_params.keys()
     rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
                             'new_rotation_flag': True,
                             'change_initial_rotation_flag': True,
@@ -86,19 +80,14 @@ def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
     inlist_template = "./templates/inlist_template"
     continue_forwards = True
     for phase_name in phases_names:
-        try:
-            if loadInlists:         ## Run from pre-made inlists
-                star.load_InlistProject(urot_inlists.pop(0))
-                if phase_name == "Start Rotation":
-                    continue        ## Skip the start rotation phase, because we started rotation in the contraction phase
-            else:                   ## Run from inlist template by setting parameters for each phase
-                star.load_InlistProject(inlist_template)
-                star.set(phases_params[phase_name], force=True)
+        try:                 ## Run from inlist template by setting parameters for each phase
+            star.load_InlistProject(inlist_template)
+            star.set(phases_params[phase_name], force=True)
             print(phase_name)
             star.set('initial_mass', initial_mass, force=True)
             star.set('initial_z', Zinit, force=True)
             star.set('max_age', phase_max_age.pop(0), force=True)
-            if phase_name == "Initial Contraction":
+            if phase_name == "Pre-MS Evolution":
                 ## Initiate rotation
                 star.set(rotation_init_params, force=True)
                 proj.run(logging=logging, parallel=parallel)
@@ -118,7 +107,7 @@ def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
 
     if continue_forwards:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            run_gyre(dir_name=name, gyre_in= os.path.abspath("templates/gyre_rot_template_dipole.in"), parallel=not parallel)   
+            run_gyre(dir_name=name, gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), parallel = not parallel)   
             ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
         
         ## Archive LOGS
@@ -130,8 +119,11 @@ def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
                 tarhandle.add(name, arcname=os.path.basename(name))
         shutil.rmtree(name)
     else:
-        if logging:
+        if logging:         ## If the run failed, archive the log file
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
+            with open(f"grid_archive/failed/failed_{model}.log", "a") as f:
+                f.write(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
+                f.write(f"Failed at phase: {phase_name}")
         shutil.rmtree(name)
 
 
@@ -172,7 +164,7 @@ def run_gyre(dir_name, gyre_in, parallel=True):
 
 
 def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True,
-            gyre=False, save_model=True, loadInlists=False, logging=True, overwrite=None):
+            gyre=False, save_model=True, logging=True, overwrite=None):
     '''
     Run the grid of models.
     Args:
@@ -181,7 +173,6 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         testrun (optional, bool): whether to run a test run
         create_grid (optional, bool): whether to create the grid
         save_model (optional, bool): whether to save the model
-        loadInlists (optional, bool): whether to load inlists from the inlists directory
         logging (optional, bool): whether to log the evolution
         overwrite (optional, bool): whether to overwrite the grid_archive
     '''
@@ -228,30 +219,30 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         length = len(masses)
         args = zip(masses, metallicities, v_surf_init_list,
                         range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
-                        repeat(loadInlists), repeat(parallel), repeat(True))
+                        repeat(parallel), repeat(True))
         if show_progress:
             live_disp, progressbar, group = helper.live_display(n_processes)
-            with live_disp:
-                task = progressbar.add_task("[b i green]Running...", total=length)
-                try:
+            try:
+                with live_disp:
                     global stop_thread
                     stop_thread = False
                     thread = threading.Thread(target=update_live_display, 
                                 args=(live_disp, progressbar, group, n_processes))
                     thread.start()
+                    task = progressbar.add_task("[b i green]Running...", total=length)
                     with mp.Pool(n_processes, initializer=helper.mute) as pool:
-                        for proc in pool.starmap(evo_star, args):
+                        for proc in pool.istarmap(evo_star, args):
                             progressbar.advance(task)
                     stop_thread = True
                     thread.join()
-                except KeyboardInterrupt:
-                    os.system("echo && echo KeyboardInterrupt && echo")
-                    os._exit(1)
+            except KeyboardInterrupt:
+                os.system("echo && echo KeyboardInterrupt && echo")
+                os._exit(1)
         else:
             with progress.Progress(*helper.progress_columns()) as progressbar,\
                  mp.Pool(n_processes, initializer=helper.mute) as pool:
                 task = progressbar.add_task("[b i green]Running...", total=length)
-                for proc in pool.starmap(evo_star, args):
+                for proc in pool.istarmap(evo_star, args):
                     progressbar.advance(task)
     else:
         # Run grid in serial
@@ -259,7 +250,7 @@ def run_grid(parallel=False, show_progress=True, testrun=False, create_grid=True
         for mass, metallicity, v_surf_init in zip(masses, metallicities, v_surf_init_list):
             print(f"[b i yellow]Running model {model} of {len(masses)}")
             evo_star(mass, metallicity, v_surf_init, model=model, gyre=gyre,
-                    save_model=save_model, logging=logging, loadInlists=loadInlists)
+                    save_model=save_model, logging=logging)
             model += 1
             print(f"[b i green]Done with model {model-1} of {len(masses)}")
             # os.system("clear")
@@ -282,25 +273,24 @@ def init_grid(testrun=None, create_grid=True):
         '''
         Get the grid from the sample lists
         '''
-        ## Metallicities: repeat from sample_metallicities for each mass and v_init
-        metallicities = np.repeat(sample_metallicities, len(sample_masses)*len(sample_v_init)).astype(float)      
-        ## Masses: repeat from sample_masses for each Z and v_init
-        masses = np.tile(np.repeat(sample_masses, len(sample_v_init)), len(sample_metallicities)).astype(float)    
-        ## v_init: repeat from sample_v_init for each mass and Z
+        masses = np.repeat(sample_masses, len(sample_metallicities)*len(sample_v_init)).astype(float) 
+        metallicities = np.tile(np.repeat(sample_metallicities, len(sample_v_init)), len(sample_masses)).astype(float)
         v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float) 
+        ### Uncomment to print grid
+        # print(list(map(tuple, np.dstack(np.array([masses, metallicities, v_surf_init_list]))[0]))) 
+        # exit()    
         return masses, metallicities, v_surf_init_list
 
     if testrun is not None:
         if testrun == "single":
-            v_surf_init_list = [2, 4, 6, 8, 10, 12, 14, 16, 18]
+            v_surf_init_list = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
         if testrun == "grid":
             sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
-            sample_v_init = np.arange(2, 20, 2)                        ## 2 - 18 km/s (2 km/s step)
-            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
-            print(masses, metallicities, v_surf_init_list)            
+            sample_v_init = np.arange(0, 20, 2)                        ## 0 - 18 km/s (2 km/s step)
+            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)    
     else:
         if create_grid:
             ## Create grid
@@ -320,16 +310,16 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = True
+    parallel = False
     if parallel:
-        os.environ['OMP_NUM_THREADS'] = "8"     
+        os.environ['OMP_NUM_THREADS'] = "8"   
         ## Uses 8 logical cores per evolution process, works best for a machine with 16 logical cores i.e. 2 parallel processes.
         ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance.
     else:
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
     # run grid
-    run_grid(parallel=parallel, overwrite=True, testrun="single")
+    run_grid(parallel=parallel, overwrite=True, testrun="grid")
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")

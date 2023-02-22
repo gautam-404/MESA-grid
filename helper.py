@@ -47,7 +47,7 @@ def phases_params(initial_mass, Zinit):
     '''
     Yinit, initial_h1, initial_h2, initial_he3, initial_he4 = initial_abundances(Zinit)
 
-    params = { 'Initial Contraction':
+    params = { 'Pre-MS Evolution':
                     {'initial_mass': initial_mass, 'initial_z': Zinit, 'Zbase': Zinit, 'initial_y': Yinit,
                     'initial_h1': initial_h1,'initial_h2': initial_h2, 
                     'initial_he3': initial_he3, 'initial_he4': initial_he4,
@@ -59,22 +59,11 @@ def phases_params(initial_mass, Zinit):
                     # 'set_rates_preference' : True, 'new_rates_preference' : 2,  ## MESA-r22.11.1 does not have these parameters
                     'show_net_species_info' : False, 'show_net_reactions_info' : False,
                     'relax_mass' : True, 'lg_max_abs_mdot' : 6, 'new_mass' : initial_mass,
-                    'max_model_number': 1, 'max_timestep' : 3.15e13,
+                    'write_header_frequency': 10, 'history_interval': 1, 'terminal_interval': 10, 'profile_interval': 50,
+                    'max_timestep' : 1.3e4,
                     'delta_lgTeff_limit' : 0.005, 'delta_lgTeff_hard_limit' : 0.01,
                     'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
                     'okay_to_reduce_gradT_excess' : True, 'scale_max_correction' : 0.1,
-                    'num_trace_history_values': 3,
-                    'trace_history_value_name(1)': 'surf_avg_v_rot',
-                    'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
-                    'trace_history_value_name(3)': 'log_total_angular_momentum'},
-                    
-                    'Pre-Main Sequence' :
-                    {'change_initial_net' : False, 'show_net_species_info' : False, 'show_net_reactions_info' : False,
-                    'max_years_for_timestep' : 1.3e4, 'max_model_number': -1,
-                    'delta_lgTeff_limit' : 0.005, 'delta_lgTeff_hard_limit' : 0.01,
-                    'delta_lgL_limit' : 0.02, 'delta_lgL_hard_limit' : 0.05,
-                    'write_header_frequency': 10, 'history_interval': 1, 'terminal_interval': 10, 'profile_interval': 50,
-                    'relax_dlnZ' : 5.0e-3, 'relax_dY' : 1.0e-2,
                     'num_trace_history_values': 3,
                     'trace_history_value_name(1)': 'surf_avg_v_rot',
                     'trace_history_value_name(2)': 'surf_avg_omega_div_omega_crit',
@@ -136,7 +125,7 @@ def process_outline(outline, age):
 
 def scrap_age(n):
     text = "\n"
-    logfiles = glob.glob("gridwork/work_*/run.log")
+    logfiles = sorted(glob.glob("gridwork/work_*/run.log"))
     for i in range(n):
         try:
             logfile = logfiles[i]
@@ -162,7 +151,6 @@ def scrap_age(n):
         else:
             text += f"[b][i]Model[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
     return text
-
 
 def progress_columns():
     '''Define progress bar columns'''
