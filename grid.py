@@ -236,6 +236,7 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
                 os.system("echo && echo KeyboardInterrupt && echo")
                 os._exit(1)
         else:
+            print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
             with progress.Progress(*helper.progress_columns()) as progressbar,\
                  mp.Pool(n_processes, initializer=helper.mute) as pool:
                 task = progressbar.add_task("[b i green]Running...", total=length)
@@ -306,16 +307,10 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = False
+    parallel = True
     if parallel:
         ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance.
         os.environ['OMP_NUM_THREADS'] = "16"  
-        omp_threads = int(os.environ['OMP_NUM_THREADS'])
-        ### For "normal" queue
-        ### AVAILABLE: [48 cores per node] 2 x 24-core Intel Xeon Platinum 8274 (Cascade Lake) 3.2 GHz CPUs per node 
-        ### Each core has 2 threads, so total 96 threads per node. OMP_NUM_THREADS = 16 runs 6 processes per node.
-        ### USES: 8 cores per process. Requires about grid_length*8 cores to run the whole grid in parallel. 
-        ### Each process consumes less than 2GB of memory, so 6 processes would need about 12GB of memory.
     else:
         os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
 
