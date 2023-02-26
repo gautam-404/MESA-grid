@@ -5,13 +5,11 @@ import tarfile
 import threading
 import time
 from itertools import repeat
-from collections import Counter, OrderedDict
-class OrderedCounter(Counter, OrderedDict):
-    pass
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
 from ray.util.multiprocessing import Pool
+import ray
 from rich import console, panel, print, progress, prompt
 
 
@@ -213,13 +211,8 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
 
     ## Run grid ##
     if parallel:
-        nodefile = os.environ.get("PBS_NODEFILE")
-        with open(nodefile, "r") as f:
-            nodes = f.readlines()
-            ordered_counter = OrderedCounter(nodes)
-        servers = tuple([k.strip().split(".")[0] for k in ordered_counter.keys()])
-        n_processes = 6
-        print(servers, n_processes)
+        processors = int(os.environ["PBS_NCPUS"])
+        n_processes = processors // int(os.environ["OMP_NUM_THREADS"])
         length = len(masses)
         args = zip(masses, metallicities, v_surf_init_list,
                         range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
@@ -247,7 +240,7 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
             with progress.Progress(*helper.progress_columns()) as progressbar:
                 task = progressbar.add_task("[b i green]Running...", total=length)
                 with Pool(n_processes, initializer=helper.mute) as executor:
-                    for result in executor.starmap(evo_star, args):
+                    for result in executor.map(evo_star, args):
                         progressbar.advance(task)
     else:
         # Run grid in serial
