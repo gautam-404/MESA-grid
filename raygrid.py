@@ -9,7 +9,6 @@ from itertools import repeat
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
 from ray.util.multiprocessing import Pool
-import ray
 from rich import console, panel, print, progress, prompt
 
 
@@ -36,8 +35,7 @@ def update_live_display(live_disp, progressbar, group, n):
 
 
     
-def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
-            save_model=True, logging=True, parallel=False, silent=False):
+def evo_star(args):
     '''Evolve a star
     Args:   mass (optional, float): mass of star in solar masses
             metallicity (optional, float): metallicity of star
@@ -49,6 +47,9 @@ def evo_star(mass, metallicity, v_surf_init=0, model=0, gyre=False,
             parallel (optional, bool): whether to parallelize the evolution
             silent (optional, bool): whether to suppress output
     '''
+    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
+    os.environ["OMP_NUM_THREADS"] = "8"
+
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     name = f"gridwork/work_{model}"
@@ -211,8 +212,8 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
 
     ## Run grid ##
     if parallel:
-        workers = int(os.environ["PBS_NCPUS"])*2
-        n_processes = workers // int(os.environ["OMP_NUM_THREADS"])
+        workers = int(os.environ["PBS_NCPUS"])
+        n_processes = workers // 8
         length = len(masses)
         args = zip(masses, metallicities, v_surf_init_list,
                         range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
@@ -227,8 +228,9 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
                                 args=(live_disp, progressbar, group, n_processes))
                     thread.start()
                     task = progressbar.add_task("[b i green]Running...", total=length)
-                    with Pool(n_processes, initializer=helper.mute) as executor:
-                        for result in executor.starmap(evo_star, args, ray_address="auto"):
+                    with Pool(n_processes, initializer=helper.mute, ray_address="auto",
+                                    ray_remote_args={"num_cpus": 1}) as executor:
+                        for result in executor.map(evo_star, args):
                             progressbar.advance(task)
                     stop_thread = True
                     thread.join()
@@ -239,19 +241,12 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
             print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
             with progress.Progress(*helper.progress_columns()) as progressbar:
                 task = progressbar.add_task("[b i green]Running...", total=length)
-                with Pool(processes=n_processes, initializer=helper.mute, ray_address="auto") as executor:
-                    for result in executor.starmap(evo_star, args):
+                with Pool(processes=n_processes, initializer=helper.mute, 
+                        ray_address="auto", ray_remote_args={"num_cpus": 1}) as executor:
+                    for result in executor.map(evo_star, args):
                         progressbar.advance(task)
     else:
-        # Run grid in serial
-        model = 1
-        for mass, metallicity, v_surf_init in zip(masses, metallicities, v_surf_init_list):
-            print(f"[b i yellow]Running model {model} of {len(masses)}")
-            evo_star(mass, metallicity, v_surf_init, model=model, gyre=gyre,
-                    save_model=save_model, logging=logging)
-            model += 1
-            print(f"[b i green]Done with model {model-1} of {len(masses)}")
-            # os.system("clear")
+        raise Exception("Serial is not implemented for ray. Set parallel=True.")
 
 
 
@@ -307,19 +302,11 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = True
-    if parallel:
-        ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance.
-        os.environ['OMP_NUM_THREADS'] = "16"  
-        print(os.cpu_count(), os.environ['OMP_NUM_THREADS'])
-    else:
-        os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())     ## Uses all available logical cores.
-
     ## Initialize grid
     masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
     # run grid
-    run_grid(masses, metallicities, v_surf_init_list, parallel=parallel, show_progress=False, overwrite=True)
+    run_grid(masses, metallicities, v_surf_init_list, parallel=True, show_progress=False, overwrite=True)
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
