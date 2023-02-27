@@ -211,8 +211,8 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
 
     ## Run grid ##
     if parallel:
-        processors = int(os.environ["PBS_NCPUS"])
-        n_processes = processors // int(os.environ["OMP_NUM_THREADS"])
+        workers = int(os.environ["PBS_NCPUS"])*2
+        n_processes = workers // int(os.environ["OMP_NUM_THREADS"])
         length = len(masses)
         args = zip(masses, metallicities, v_surf_init_list,
                         range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
@@ -228,7 +228,7 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
                     thread.start()
                     task = progressbar.add_task("[b i green]Running...", total=length)
                     with Pool(n_processes, initializer=helper.mute) as executor:
-                        for result in executor.starmap(evo_star, args):
+                        for result in executor.starmap(evo_star, args, ray_address="auto"):
                             progressbar.advance(task)
                     stop_thread = True
                     thread.join()
@@ -239,8 +239,8 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
             print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
             with progress.Progress(*helper.progress_columns()) as progressbar:
                 task = progressbar.add_task("[b i green]Running...", total=length)
-                with Pool(n_processes, initializer=helper.mute) as executor:
-                    for result in executor.map(evo_star, args):
+                with Pool(processes=n_processes, initializer=helper.mute, ray_address="auto") as executor:
+                    for result in executor.starmap(evo_star, args):
                         progressbar.advance(task)
     else:
         # Run grid in serial
