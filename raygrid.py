@@ -193,7 +193,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
 
     ## Run grid ##
     workers = int(ray.cluster_resources()["CPU"])
-    cpu_per_worker = 32
+    cpu_per_worker = 24
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
                                         "MKL_NUM_THREADS": str(cpu_per_worker)})
     ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
