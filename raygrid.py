@@ -263,7 +263,7 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     ## Initialize grid
-    masses, metallicities, v_surf_init_list = init_grid(testrun="single")
+    masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
     # run grid
     run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
