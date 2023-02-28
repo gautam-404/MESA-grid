@@ -12,6 +12,7 @@ from MESAcontroller import MesaAccess, ProjectOps
 from rich import console, print, progress, prompt
 from ray.util.multiprocessing import Pool
 import ray
+from ray.runtime_env import RuntimeEnv
 
 import helper
 
@@ -29,8 +30,6 @@ def evo_star(args):
             silent (optional, bool): whether to suppress output
     '''
     mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
-    
-    os.environ["OMP_NUM_THREADS"] = "16"
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
@@ -107,7 +106,7 @@ def evo_star(args):
         if logging:         ## If the run failed, archive the log file
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
             with open(f"grid_archive/failed/failed_{model}.log", "a") as f:
-                f.write(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
+                f.write(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
                 f.write(f"Failed at phase: {phase_name}")
         shutil.rmtree(name)
 
@@ -193,8 +192,15 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     os.mkdir("gridwork")
 
     ## Run grid ##
-    workers = int(os.environ["PBS_NCPUS"])
-    n_processes = workers // 16
+    workers = int(ray.cluster_resources()["CPU"])
+    cpu_per_worker = 32
+    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
+                                        "MKL_NUM_THREADS": str(cpu_per_worker)})
+    ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
+                        "scheduling_strategy" : "SPREAD", 
+                        "max_restarts" : -1, "max_task_retries" : -1}
+    n_processes = (workers // cpu_per_worker)
+    # print(workers, cpu_per_worker, n_processes)
     length = len(masses)
     args = zip(masses, metallicities, v_surf_init_list,
                     range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
@@ -203,8 +209,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(processes=n_processes, initializer=helper.mute, 
-                ray_remote_args={"num_cpus": 16}) as executor:
+        with Pool(processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as executor:
             results = []
             for i, res in enumerate(executor.imap_unordered(evo_star, args)):
                 results.append(res)

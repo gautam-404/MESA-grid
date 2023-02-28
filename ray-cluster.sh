@@ -11,11 +11,10 @@ UHOME=/home/594/ag9272
 nodeDnsIps=`cat $PBS_NODEFILE | uniq`
 headNodeDnsIp=`uname -n`
 headNodeIp=`hostname -i`
-# rayDashboardPort=7711
+rayDashboardPort=7711
 rayPort=5711
 headNodeIpNport="${headNodeIp}:${rayPort}"
 redisPassword=$(uuidgen)
-# export redisPassword=$redisPassword
 
 
 cat > $PBS_O_WORKDIR/setupRayWorkerNode.sh << 'EOF'
@@ -39,7 +38,7 @@ UHOME=${3}
 source $UHOME/.pyenv/versions/3.11.2/envs/ray/bin/activate
 
 thisNodeIp=`hostname -i`
-echo `ray start --address=$headNodeIpNport --num-cpus=48 --redis-password=$redisPassword --block`
+echo `ray start --address=$headNodeIpNport --num-cpus=48 --redis-password=$redisPassword --block &`
 EOF
 
 chmod +x $PBS_O_WORKDIR/setupRayWorkerNode.sh
@@ -53,16 +52,22 @@ do
                 echo -e "\nStarting ray cluster on head node..."
                 source $UHOME/.bashrc
                 source $UHOME/.pyenv/versions/3.11.2/envs/ray/bin/activate
-                ray start --head --num-cpus=48 --port=$rayPort
+                ray start --head --num-cpus=48 --port=$rayPort \
+                --include-dashboard=true --dashboard-host=0.0.0.0 --dashboard-port=${rayDashboardPort}
                 sleep 3
         else
                 echo -e "\nStarting ray cluster on worker node $J"
                 pbs_tmrsh ${nodeDnsIp} $PBS_O_WORKDIR/setupRayWorkerNode.sh ${headNodeIpNport} $redisPassword $UHOME &
                 echo Done.
-                sleep 1
+                # sleep 1
         fi
         J=$((J+1))
 done
 
-sleep 10
+echo "Ray cluster setup complete."
+echo "Forward the dashboard port to localhost using the following command:"
+echo "ssh -N -L 8880:0.0.0.0:$rayDashboardPort $USER@$headNodeDnsIp -J $USER@gadi.nci.org.au"
+
+sleep $J
 rm $PBS_O_WORKDIR/setupRayWorkerNode.sh
+
