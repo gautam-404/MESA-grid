@@ -65,3 +65,4 @@ do
 done
 
 rm $PBS_O_WORKDIR/setupRayWorkerNode.sh
+sleep 5
