@@ -64,5 +64,5 @@ do
         J=$((J+1))
 done
 
+sleep 10
 rm $PBS_O_WORKDIR/setupRayWorkerNode.sh
-sleep 5
