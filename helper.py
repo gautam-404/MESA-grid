@@ -159,7 +159,8 @@ def progress_columns():
                 progress.BarColumn(bar_width=60),
                 progress.MofNCompleteColumn(),
                 progress.TaskProgressColumn(),
-                progress.TimeElapsedColumn())
+                progress.TimeElapsedColumn(),
+                progress.TimeRemainingColumn())
     return progress_columns
 
 def live_display(n):
