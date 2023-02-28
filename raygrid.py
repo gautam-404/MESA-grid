@@ -16,8 +16,7 @@ import ray
 import helper
 
 
-def evo_star(mass, metallicity, v_surf_init, model, gyre=False,
-            save_model=True, logging=True, parallel=True, silent=True):
+def evo_star(args):
     '''Evolve a star
     Args:   mass (optional, float): mass of star in solar masses
             metallicity (optional, float): metallicity of star
@@ -29,6 +28,8 @@ def evo_star(mass, metallicity, v_surf_init, model, gyre=False,
             parallel (optional, bool): whether to parallelize the evolution
             silent (optional, bool): whether to suppress output
     '''
+    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
+    
     os.environ["OMP_NUM_THREADS"] = "16"
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
@@ -204,12 +205,12 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
         task = progressbar.add_task("[b i green]Running...", total=length)
         with Pool(processes=n_processes, initializer=helper.mute, 
                 ray_remote_args={"num_cpus": 16}) as executor:
-            for result in executor.starmap(evo_star, args):
+            results = []
+            for i, res in enumerate(executor.imap_unordered(evo_star, args)):
+                results.append(res)
                 progressbar.advance(task)
 
-
-
-
+        
 
 def init_grid(testrun=None, create_grid=True):
     '''
@@ -269,6 +270,7 @@ if __name__ == "__main__":
         try:
             with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status, open("ray.log", "w") as logfile:
                 res = subprocess.call("./ray-cluster.sh", stdout=logfile, stderr=logfile)
+                subprocess.call(["clear"])
                 status.update("[b i][green]Ray cluster started.[/green]")
                 ray.init("auto")
         except KeyboardInterrupt:
