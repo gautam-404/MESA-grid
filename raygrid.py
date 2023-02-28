@@ -9,7 +9,7 @@ import subprocess
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
-from rich import console, panel, print, progress, prompt
+from rich import console, print, progress, prompt
 from ray.util.multiprocessing import Pool
 import ray
 
@@ -240,9 +240,9 @@ def init_grid(testrun=None, create_grid=True):
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
         if testrun == "grid":
-            sample_masses = np.arange(1.30,1.51,0.02)                  ## 1.30 - 1.50 Msun (0.02 Msun step)
-            sample_metallicities = np.arange(0.0010,0.0101,0.0010)     ## 0.001 - 0.010 (0.001 step)
-            sample_v_init = np.arange(0, 20, 2)                        ## 0 - 18 km/s (2 km/s step)
+            sample_masses = np.arange(1.30, 1.56, 0.02)                  ## 1.30 - 1.54 Msun (0.02 Msun step)
+            sample_metallicities = np.arange(0.001, 0.013, 0.001)     ## 0.001 - 0.012 (0.001 step)
+            sample_v_init = np.arange(0, 20, 2)                          ## 0 - 18 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)    
     elif create_grid:
         ## Create grid
@@ -262,15 +262,24 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    ## Start the ray cluster
-    with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
-        subprocess.run("./ray-cluster.sh", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
-        status.update("[b i][green]Ray cluster started.[/green]")
+    try:
+        ray.init("auto")
+    except:
+        ## Start the ray cluster
+        try:
+            with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status, open("ray.log", "w") as logfile:
+                res = subprocess.call("./ray-cluster.sh", stdout=logfile, stderr=logfile)
+                status.update("[b i][green]Ray cluster started.[/green]")
+                ray.init("auto")
+        except KeyboardInterrupt:
+            print("[b i][red]Ray cluster setup aborted.[/red]")
+            subprocess.call(["ray", "stop"])
+            raise KeyboardInterrupt
+        
 
     ## Initialize grid
     masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-    ray.init("auto")
     # run grid
     run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
 
