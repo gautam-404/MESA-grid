@@ -45,7 +45,6 @@ EOF
 chmod +x $PBS_O_WORKDIR/setupRayWorkerNode.sh
 
 echo "Setting up Ray cluster......."
-J=0
 for nodeDnsIp in `echo ${nodeDnsIps}`
 do
         if [[ ${nodeDnsIp} == "${hostNodeDnsIp}" ]]
@@ -54,13 +53,12 @@ do
                 source $UHOME/.bashrc
                 source $UHOME/.pyenv/versions/3.11.2/envs/ray/bin/activate
                 ray start --head --num-cpus=48 --port=$rayPort
-                sleep 5
+                # sleep 5
         else
                 echo -e "\nStarting ray cluster on worker node ${hostNodeDnsIp} at ${thishostNport}"
                 pbs_tmrsh ${nodeDnsIp} $PBS_O_WORKDIR/setupRayWorkerNode.sh ${thishostNport} $redisPassword $UHOME &
-                sleep 5
+                # sleep 5
         fi
-        J=$((J+1))
 done
 
 rm $PBS_O_WORKDIR/setupRayWorkerNode.sh

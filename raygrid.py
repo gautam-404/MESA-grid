@@ -5,13 +5,13 @@ import tarfile
 import threading
 import time
 from itertools import repeat
+import subprocess
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
 from rich import console, panel, print, progress, prompt
 from ray.util.multiprocessing import Pool
 import ray
-ray.init("auto")
 
 import helper
 
@@ -262,9 +262,15 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
+    ## Start the ray cluster
+    with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
+        subprocess.run("./ray-cluster.sh", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
+        status.update("[b i][green]Ray cluster started.[/green]")
+
     ## Initialize grid
     masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
+    ray.init("auto")
     # run grid
     run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
 
