@@ -1,16 +1,17 @@
 #!/bin/bash
  
-#PBS -l ncpus=8832
-#PBS -l mem=2200GB
-#PBS -l jobfs=200GB
+#PBS -l ncpus=12480
+#PBS -l mem=5200GB
+#PBS -l jobfs=300GB
 #PBS -q normal
 #PBS -P ht06
-#PBS -l walltime=00:10:00
+#PBS -l walltime=01:00:00
 #PBS -l storage=scratch/ht06
 #PBS -l wd
 #PBS -M anuj.gautam@usq.edu.au
 #PBS -m abe
-  
-module load openmpi/4.1.4
+
+source ~/.pyenv/versions/3.11.2/envs/ray/bin/activate
 source ~/.bashrc
-mpiexec -n 184 --hostfile $PBS_NODEFILE ~/.pyenv/shims/python3 mpigrid.py $PBS_NCPUS > /scratch/ht06/$USER/workspace/MESA-grid/job_logs/$PBS_JOBID.log
+
+python raygrid.py
