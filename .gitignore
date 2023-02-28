@@ -3,7 +3,8 @@ grid_archive/*
 grid_archive_old/*
 test/*
 software/*
-
+ray.log
+install.log
 
 
 **/.DS_Store
