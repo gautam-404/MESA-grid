@@ -8,34 +8,16 @@ from itertools import repeat
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
-from ray.util.multiprocessing import Pool
 from rich import console, panel, print, progress, prompt
-
+from ray.util.multiprocessing import Pool
+import ray
+ray.init("auto")
 
 import helper
 
 
-def update_live_display(live_disp, progressbar, group, n):
-    '''Update live display
-    Args:   live_disp (rich.live.Live): live display
-            progressbar (rich.progress.Progress): progress bar
-            group (rich.console.Group): group of panels
-            n (int): number of models
-            stop (bool): stop live display
-    '''
-    try:
-        while True:
-            group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(helper.scrap_age(n), expand=False))
-            time.sleep(0.2)
-            live_disp.update(group, refresh=True)
-            if stop_thread is True:
-                break
-    except KeyboardInterrupt:
-        raise KeyboardInterrupt
-
-
-    
-def evo_star(args):
+def evo_star(mass, metallicity, v_surf_init, model, gyre=False,
+            save_model=True, logging=True, parallel=True, silent=True):
     '''Evolve a star
     Args:   mass (optional, float): mass of star in solar masses
             metallicity (optional, float): metallicity of star
@@ -47,8 +29,7 @@ def evo_star(args):
             parallel (optional, bool): whether to parallelize the evolution
             silent (optional, bool): whether to suppress output
     '''
-    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
-    os.environ["OMP_NUM_THREADS"] = "8"
+    os.environ["OMP_NUM_THREADS"] = "32"
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
@@ -166,7 +147,7 @@ def run_gyre(dir_name, gyre_in, parallel=True):
 
 
 
-def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progress=True, gyre=False, 
+def run_grid(masses, metallicities, v_surf_init_list, gyre=False, 
             save_model=True, logging=True, overwrite=None):
     '''
     Run the grid of models.
@@ -211,42 +192,21 @@ def run_grid(masses, metallicities, v_surf_init_list, parallel=False, show_progr
     os.mkdir("gridwork")
 
     ## Run grid ##
-    if parallel:
-        workers = int(os.environ["PBS_NCPUS"])
-        n_processes = workers // 8
-        length = len(masses)
-        args = zip(masses, metallicities, v_surf_init_list,
-                        range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
-                        repeat(parallel), repeat(True))
-        if show_progress:
-            live_disp, progressbar, group = helper.live_display(n_processes)
-            try:
-                with live_disp:
-                    global stop_thread
-                    stop_thread = False
-                    thread = threading.Thread(target=update_live_display, 
-                                args=(live_disp, progressbar, group, n_processes))
-                    thread.start()
-                    task = progressbar.add_task("[b i green]Running...", total=length)
-                    with Pool(n_processes, initializer=helper.mute, ray_address="auto",
-                                    ray_remote_args={"num_cpus": 1}) as executor:
-                        for result in executor.map(evo_star, args):
-                            progressbar.advance(task)
-                    stop_thread = True
-                    thread.join()
-            except KeyboardInterrupt:
-                os.system("echo && echo KeyboardInterrupt && echo")
-                os._exit(1)
-        else:
-            print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
-            with progress.Progress(*helper.progress_columns()) as progressbar:
-                task = progressbar.add_task("[b i green]Running...", total=length)
-                with Pool(processes=n_processes, initializer=helper.mute, 
-                        ray_address="auto", ray_remote_args={"num_cpus": 1}) as executor:
-                    for result in executor.map(evo_star, args):
-                        progressbar.advance(task)
-    else:
-        raise Exception("Serial is not implemented for ray. Set parallel=True.")
+    workers = int(os.environ["PBS_NCPUS"])
+    n_processes = workers // 16
+    length = len(masses)
+    args = zip(masses, metallicities, v_surf_init_list,
+                    range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
+                    repeat(True), repeat(True))
+       
+    print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
+    with progress.Progress(*helper.progress_columns()) as progressbar:
+        task = progressbar.add_task("[b i green]Running...", total=length)
+        with Pool(processes=n_processes, initializer=helper.mute, 
+                ray_remote_args={"num_cpus": 16}) as executor:
+            for result in executor.starmap(evo_star, args):
+                progressbar.advance(task)
+
 
 
 
@@ -276,7 +236,7 @@ def init_grid(testrun=None, create_grid=True):
 
     if testrun is not None:
         if testrun == "single":
-            v_surf_init_list = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+            v_surf_init_list = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
         if testrun == "grid":
@@ -303,10 +263,10 @@ def init_grid(testrun=None, create_grid=True):
 
 if __name__ == "__main__":
     ## Initialize grid
-    masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
+    masses, metallicities, v_surf_init_list = init_grid(testrun="single")
 
     # run grid
-    run_grid(masses, metallicities, v_surf_init_list, parallel=True, show_progress=False, overwrite=True)
+    run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
 
     # # run gyre
     # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
