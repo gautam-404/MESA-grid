@@ -29,7 +29,7 @@ def evo_star(mass, metallicity, v_surf_init, model, gyre=False,
             parallel (optional, bool): whether to parallelize the evolution
             silent (optional, bool): whether to suppress output
     '''
-    os.environ["OMP_NUM_THREADS"] = "32"
+    os.environ["OMP_NUM_THREADS"] = "16"
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
