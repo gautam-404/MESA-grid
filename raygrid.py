@@ -283,15 +283,19 @@ if __name__ == "__main__":
             subprocess.call(["ray", "stop"])
             raise KeyboardInterrupt
         
+    try:
+        ## Initialize grid
+        masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-    ## Initialize grid
-    masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
+        # run grid
+        run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
 
-    # run grid
-    run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
-
-    # # run gyre
-    # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
+        # # run gyre
+        # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
+    except KeyboardInterrupt:
+        print("[b i][red]Grid run aborted.[/red]")
+        print("[b i][red]Stopping ray cluster[/red]")
+        subprocess.call(["ray", "stop"])
 
     
 
