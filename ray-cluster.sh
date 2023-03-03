@@ -30,7 +30,7 @@ UHOME=${3}
 source $UHOME/.bashrc
 
 thisNodeIp=`hostname -i`
-ray start --address=$headNodeIpNport --num-cpus=48 --redis-password=$redisPassword --block &
+ray start --address=$headNodeIpNport --num-cpus=28 --redis-password=$redisPassword --block &
 EOF
 
 chmod +x $PBS_O_WORKDIR/setupRayWorkerNode.sh
@@ -43,7 +43,7 @@ do
         then
                 echo -e "\nStarting ray cluster on head node..."
                 source $UHOME/.bashrc
-                ray start --head --num-cpus=48 --port=$rayPort \
+                ray start --head --num-cpus=28 --port=$rayPort \
                 --include-dashboard=true --dashboard-host=0.0.0.0 --dashboard-port=${rayDashboardPort}
                 sleep 3
         else
