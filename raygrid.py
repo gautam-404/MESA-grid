@@ -276,8 +276,8 @@ if __name__ == "__main__":
             with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
                 res = subprocess.call("./rayCluster/ray-cluster.sh", stdout=subprocess.DEVNULL)
                 status.update("[b i][green]Ray cluster started.[/green]")
-                ray.init("auto")
                 subprocess.call(["clear"])
+                ray.init("auto")
         except KeyboardInterrupt:
             subprocess.call("ray stop --force".split(" "))
             subprocess.call("killall -9 pbs_tmrsh".split(" "))
