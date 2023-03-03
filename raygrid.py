@@ -193,7 +193,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
 
     ## Run grid ##
     workers = int(ray.cluster_resources()["CPU"])
-    cpu_per_worker = 24
+    cpu_per_worker = 32
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
                                         "MKL_NUM_THREADS": str(cpu_per_worker)})
     ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
@@ -249,7 +249,7 @@ def init_grid(testrun=None, create_grid=True):
             sample_masses = np.arange(1.30, 1.56, 0.02)                  ## 1.30 - 1.54 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.001, 0.013, 0.001)     ## 0.001 - 0.012 (0.001 step)
             sample_v_init = np.arange(0, 20, 2)                          ## 0 - 18 km/s (2 km/s step)
-            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)    
+            masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
     elif create_grid:
         ## Create grid
         sample_masses = np.arange(1.36, 2.22, 0.02)                ## 1.36 - 2.20 Msun (0.02 Msun step)
@@ -273,14 +273,15 @@ if __name__ == "__main__":
     except:
         ## Start the ray cluster
         try:
-            with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status, open("ray.log", "w") as logfile:
-                res = subprocess.call("./ray-cluster.sh", stdout=logfile, stderr=logfile)
-                subprocess.call(["clear"])
+            with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
+                res = subprocess.call("./rayCluster/ray-cluster.sh", stdout=subprocess.DEVNULL)
                 status.update("[b i][green]Ray cluster started.[/green]")
                 ray.init("auto")
+                subprocess.call(["clear"])
         except KeyboardInterrupt:
+            subprocess.call("ray stop --force".split(" "))
+            subprocess.call("killall -9 pbs_tmrsh".split(" "))
             print("[b i][red]Ray cluster setup aborted.[/red]")
-            subprocess.call(["ray", "stop"])
             raise KeyboardInterrupt
         
     try:
@@ -293,9 +294,17 @@ if __name__ == "__main__":
         # # run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
     except KeyboardInterrupt:
+        subprocess.call("ray stop --force".split(" "))
+        subprocess.call("killall -9 pbs_tmrsh".split(" "))
         print("[b i][red]Grid run aborted.[/red]")
         print("[b i][red]Stopping ray cluster[/red]")
-        subprocess.call(["ray", "stop"])
+    except Exception as e:
+        import traceback
+        import logging
+        logging.error(traceback.format_exc())
+        subprocess.call("ray stop --force".split(" "))
+        subprocess.call("killall -9 pbs_tmrsh".split(" "))
+        print("[b i][red]Stopping ray cluster[/red]")
 
     
 
