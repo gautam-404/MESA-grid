@@ -9,7 +9,7 @@ cd $PBS_O_WORKDIR
 
 UHOME=`eval echo "~$USER"`
 nodeDnsIps=`cat $PBS_NODEFILE | uniq`
-headNodeDnsIp=`uname -n`
+headNodeDnsIp=`echo $nodeDnsIps | awk '{print $1}'`
 headNodeIp=`hostname -i`
 rayDashboardPort=7711
 rayPort=5711
@@ -37,9 +37,9 @@ chmod +x $PBS_O_WORKDIR/setupRayWorkerNode.sh
 
 echo "Setting up Ray cluster......."
 J=0
-for nodeDnsIp in `echo ${nodeDnsIps}`
+for nodeDnsIp in `echo $nodeDnsIps`
 do
-        if [[ ${nodeDnsIp} == "${headNodeDnsIp}" ]]
+        if [[ $nodeDnsIp == $headNodeDnsIp ]]
         then
                 echo -e "\nStarting ray cluster on head node..."
                 source $UHOME/.bashrc
@@ -47,8 +47,8 @@ do
                 --include-dashboard=true --dashboard-host=0.0.0.0 --dashboard-port=${rayDashboardPort}
                 sleep 3
         else
-                echo -e "\nStarting ray cluster on worker node $J"
-                pbs_tmrsh ${nodeDnsIp} $PBS_O_WORKDIR/setupRayWorkerNode.sh ${headNodeIpNport} $redisPassword $UHOME &
+                echo -e "\nStarting ray cluster on worker node $J: $nodeDnsIp"
+                pbs_tmrsh $nodeDnsIp $PBS_O_WORKDIR/setupRayWorkerNode.sh $headNodeIpNport $redisPassword $UHOME &
                 echo Done.
                 # sleep 1
         fi
@@ -57,7 +57,7 @@ done
 
 echo "Ray cluster setup complete."
 echo "Forward the dashboard port to localhost using the following command:"
-echo "ssh -N -L 8880:0.0.0.0:$rayDashboardPort $USER@$headNodeDnsIp -J $USER@gadi.nci.org.au"
+echo "ssh -N -L 8880:0.0.0.0:$rayDashboardPort $USER@$headNodeDnsIp -J $USER@___.org.au"
 
 sleep $J
 rm $PBS_O_WORKDIR/setupRayWorkerNode.sh
