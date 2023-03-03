@@ -28,7 +28,6 @@ redisPassword=${2}
 UHOME=${3}
 
 source $UHOME/.bashrc
-source $UHOME/.pyenv/versions/3.11.2/envs/ray/bin/activate
 
 thisNodeIp=`hostname -i`
 echo `ray start --address=$headNodeIpNport --num-cpus=48 --redis-password=$redisPassword --block &`
@@ -44,7 +43,6 @@ do
         then
                 echo -e "\nStarting ray cluster on head node..."
                 source $UHOME/.bashrc
-                source $UHOME/.pyenv/versions/3.11.2/envs/ray/bin/activate
                 ray start --head --num-cpus=48 --port=$rayPort \
                 --include-dashboard=true --dashboard-host=0.0.0.0 --dashboard-port=${rayDashboardPort}
                 sleep 3
