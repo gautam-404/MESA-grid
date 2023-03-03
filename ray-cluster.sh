@@ -30,7 +30,7 @@ UHOME=${3}
 source $UHOME/.bashrc
 
 thisNodeIp=`hostname -i`
-echo `ray start --address=$headNodeIpNport --num-cpus=48 --redis-password=$redisPassword --block &`
+ray start --address=$headNodeIpNport --num-cpus=48 --redis-password=$redisPassword --block &
 EOF
 
 chmod +x $PBS_O_WORKDIR/setupRayWorkerNode.sh
