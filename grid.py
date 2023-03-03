@@ -307,7 +307,7 @@ def init_grid(testrun=None, create_grid=True):
 
 
 if __name__ == "__main__":
-    parallel = True
+    parallel = False
     if parallel:
         ## An optimal balance between OMP_NUM_THREADS and n_processes is required for best performance.
         os.environ['OMP_NUM_THREADS'] = "16"  
