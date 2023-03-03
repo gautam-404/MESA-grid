@@ -35,7 +35,7 @@ source $UHOME/.bashrc
 
 thisNodeIp=`hostname -i`
 ray start --address=$headNodeIpNport --num-cpus=$ncpus \
---redis-password=$redisPassword --block >> ray.log > /dev/null 2>&1
+--redis-password=$redisPassword --block >> ray.log 2>&1
 EOF
 
 chmod +x $PBS_O_WORKDIR/setupRayWorkerNode.sh
@@ -56,7 +56,6 @@ do
                 echo -e "\nStarting ray cluster on worker node $J: $nodeDnsIp" | tee -a ray.log
                 pbs_tmrsh $nodeDnsIp $PBS_O_WORKDIR/setupRayWorkerNode.sh $headNodeIpNport $redisPassword $UHOME $scriptPath &
                 echo Done. | tee -a ray.log
-                # sleep 1
         fi
         J=$((J+1))
 done

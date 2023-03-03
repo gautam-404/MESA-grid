@@ -195,14 +195,14 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     os.mkdir("gridwork")
 
     ## Run grid ##
-    workers = int(ray.cluster_resources()["CPU"])
+    processors = int(ray.cluster_resources()["CPU"])
     cpu_per_worker = 32
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
                                         "MKL_NUM_THREADS": str(cpu_per_worker)})
     ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
                         "scheduling_strategy" : "DEFAULT", 
                         "max_restarts" : -1, "max_task_retries" : -1}
-    n_processes = (workers // cpu_per_worker)
+    n_processes = (processors // cpu_per_worker)
     # print(workers, cpu_per_worker, n_processes)
     length = len(masses)
     args = zip(masses, metallicities, v_surf_init_list,
@@ -212,7 +212,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as executor:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as executor:
             results = []
             for i, res in enumerate(executor.imap_unordered(evo_star, args)):
                 results.append(res)
@@ -278,12 +278,16 @@ def start_ray():
 
 if __name__ == "__main__":
     try:
-        ## Start the ray cluster
-        with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
-            start_ray()
-            status.update("[b i][green]Ray cluster started.[/green]")
-            # subprocess.call(["clear"])
+        try:
             ray.init(address="auto")
+            print(os.environ["RAY_ADDRESS"])
+        except:
+            ## Start the ray cluster
+            with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
+                start_ray()
+                # subprocess.call(["clear"])
+                ray.init(address="auto")
+            print("[b i][green]Ray cluster started.[/green]")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
@@ -294,15 +298,15 @@ if __name__ == "__main__":
         # ## Run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
     except KeyboardInterrupt:
-        stop_ray()
         print("[b i][red]Grid run aborted.[/red]")
+        stop_ray()
         print("[b i][red]Ray cluster stopped.[/red]")
     except Exception as e:
         import traceback
         import logging
         logging.error(traceback.format_exc())
-        stop_ray()
         print("[b i][red]Encountered an error.[/red]")
+        stop_ray()
         print("[b i][red]Ray cluster stopped.[/red]")
 
     
