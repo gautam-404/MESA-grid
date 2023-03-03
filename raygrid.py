@@ -88,6 +88,9 @@ def evo_star(args):
             break
         except KeyboardInterrupt:
             raise KeyboardInterrupt
+        except:
+            continue_forwards = False
+            break
 
     if continue_forwards:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
@@ -197,7 +200,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
                                         "MKL_NUM_THREADS": str(cpu_per_worker)})
     ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
-                        "scheduling_strategy" : "SPREAD", 
+                        "scheduling_strategy" : "DEFAULT", 
                         "max_restarts" : -1, "max_task_retries" : -1}
     n_processes = (workers // cpu_per_worker)
     # print(workers, cpu_per_worker, n_processes)
@@ -265,24 +268,26 @@ def init_grid(testrun=None, create_grid=True):
         v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
     return masses, metallicities, v_surf_init_list
 
+def stop_ray():
+    subprocess.call("ray stop --force".split(" "))
+    subprocess.call("killall -9 pbs_tmrsh".split(" "))
 
+def start_ray():
+    ## this shell script stops all ray processing before starting new cluster
+    subprocess.call("./rayCluster/ray-cluster.sh", stdout=subprocess.DEVNULL)
 
 if __name__ == "__main__":
+    ## Start the ray cluster
     try:
-        ray.init("auto")
-    except:
-        ## Start the ray cluster
-        try:
-            with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
-                res = subprocess.call("./rayCluster/ray-cluster.sh", stdout=subprocess.DEVNULL)
-                status.update("[b i][green]Ray cluster started.[/green]")
-                subprocess.call(["clear"])
-                ray.init("auto")
-        except KeyboardInterrupt:
-            subprocess.call("ray stop --force".split(" "))
-            subprocess.call("killall -9 pbs_tmrsh".split(" "))
-            print("[b i][red]Ray cluster setup aborted.[/red]")
-            raise KeyboardInterrupt
+        with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
+            start_ray()
+            status.update("[b i][green]Ray cluster started.[/green]")
+            # subprocess.call(["clear"])
+            ray.init("auto")
+    except KeyboardInterrupt:
+        stop_ray()
+        print("[b i][red]Ray cluster setup aborted.[/red]")
+        raise KeyboardInterrupt
         
     try:
         ## Initialize grid
@@ -294,16 +299,14 @@ if __name__ == "__main__":
         # # run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
     except KeyboardInterrupt:
-        subprocess.call("ray stop --force".split(" "))
-        subprocess.call("killall -9 pbs_tmrsh".split(" "))
+        stop_ray()
         print("[b i][red]Grid run aborted.[/red]")
         print("[b i][red]Stopping ray cluster[/red]")
     except Exception as e:
         import traceback
         import logging
         logging.error(traceback.format_exc())
-        subprocess.call("ray stop --force".split(" "))
-        subprocess.call("killall -9 pbs_tmrsh".split(" "))
+        stop_ray()
         print("[b i][red]Stopping ray cluster[/red]")
 
     
