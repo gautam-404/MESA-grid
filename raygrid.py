@@ -274,40 +274,36 @@ def stop_ray():
 
 def start_ray():
     ## this shell script stops all ray processing before starting new cluster
-    subprocess.call("./rayCluster/ray-cluster.sh", stdout=subprocess.DEVNULL)
+    subprocess.call("./rayCluster/ray-cluster.sh".split(" "), stdout=subprocess.DEVNULL)
 
 if __name__ == "__main__":
-    ## Start the ray cluster
     try:
+        ## Start the ray cluster
         with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
             start_ray()
             status.update("[b i][green]Ray cluster started.[/green]")
             # subprocess.call(["clear"])
-            ray.init("auto")
-    except KeyboardInterrupt:
-        stop_ray()
-        print("[b i][red]Ray cluster setup aborted.[/red]")
-        raise KeyboardInterrupt
-        
-    try:
+            ray.init(address="auto")
+
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-        # run grid
+        ## Run grid
         run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
 
-        # # run gyre
+        # ## Run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
     except KeyboardInterrupt:
         stop_ray()
         print("[b i][red]Grid run aborted.[/red]")
-        print("[b i][red]Stopping ray cluster[/red]")
+        print("[b i][red]Ray cluster stopped.[/red]")
     except Exception as e:
         import traceback
         import logging
         logging.error(traceback.format_exc())
         stop_ray()
-        print("[b i][red]Stopping ray cluster[/red]")
+        print("[b i][red]Encountered an error.[/red]")
+        print("[b i][red]Ray cluster stopped.[/red]")
 
     
 
