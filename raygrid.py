@@ -2,7 +2,6 @@ import glob
 import os
 import shutil
 import tarfile
-import threading
 import time
 from itertools import repeat
 import subprocess
@@ -26,7 +25,7 @@ def evo_star(args):
             gyre (optional, bool): whether to run gyre after evolution
             save_model (optional, bool): whether to save the model
             logging (optional, bool): whether to log the evolution
-            parallel (optional, bool): whether to parallelize the evolution
+            parallel (optional, bool): whether evolution is part of a parallel grid
             silent (optional, bool): whether to suppress output
     '''
     mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
@@ -66,10 +65,8 @@ def evo_star(args):
     for phase_name in phases_names:
         try:                 ## Run from inlist template by setting parameters for each phase
             star.load_InlistProject(inlist_template)
-            star.set(phases_params[phase_name], force=True)
             print(phase_name)
-            star.set('initial_mass', initial_mass, force=True)
-            star.set('initial_z', Zinit, force=True)
+            star.set(phases_params[phase_name], force=True)
             star.set('max_age', phase_max_age.pop(0), force=True)
             if phase_name == "Pre-MS Evolution":
                 ## Initiate rotation
@@ -196,7 +193,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
 
     ## Run grid ##
     processors = int(ray.cluster_resources()["CPU"])
-    cpu_per_worker = 32
+    cpu_per_worker = 16
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
                                         "MKL_NUM_THREADS": str(cpu_per_worker)})
     ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
@@ -212,10 +209,8 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as executor:
-            results = []
-            for i, res in enumerate(executor.imap_unordered(evo_star, args)):
-                results.append(res)
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+            for i, res in enumerate(pool.imap_unordered(evo_star, args)):
                 progressbar.advance(task)
 
         
@@ -280,14 +275,13 @@ if __name__ == "__main__":
     try:
         try:
             ray.init(address="auto")
-            print(os.environ["RAY_ADDRESS"])
         except:
             ## Start the ray cluster
             with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
                 start_ray()
                 # subprocess.call(["clear"])
-                ray.init(address="auto")
-            print("[b i][green]Ray cluster started.[/green]")
+            print("[b i][green]Ray cluster started.[/green]\n")
+            ray.init(address="auto")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
@@ -298,16 +292,16 @@ if __name__ == "__main__":
         # ## Run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
     except KeyboardInterrupt:
-        print("[b i][red]Grid run aborted.[/red]")
+        print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
-        print("[b i][red]Ray cluster stopped.[/red]")
+        print("[b i][red]Ray cluster stopped.[/red]\n")
     except Exception as e:
         import traceback
         import logging
         logging.error(traceback.format_exc())
-        print("[b i][red]Encountered an error.[/red]")
+        print("[b i][red]Encountered an error.[/red]\n")
         stop_ray()
-        print("[b i][red]Ray cluster stopped.[/red]")
+        print("[b i][red]Ray cluster stopped.[/red]\n")
 
     
 
