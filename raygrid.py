@@ -281,7 +281,7 @@ if __name__ == "__main__":
                 # subprocess.call(["clear"])
             print("[b i][green]Ray cluster started.[/green]\n")
             ray.init(address="auto")
-        print("[b i][blue]Ray cluster resources:[/blue]")
+        print("\n[b i][blue]Ray cluster resources:[/blue]")
         print("CPUs: ", ray.cluster_resources()["CPU"])
         print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
 
