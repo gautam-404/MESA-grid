@@ -11,7 +11,6 @@
 #PBS -M anuj.gautam@usq.edu.au
 #PBS -m abe
 
-source ~/.pyenv/versions/3.11.2/envs/ray/bin/activate
 source ~/.bashrc
 
 python raygrid.py
