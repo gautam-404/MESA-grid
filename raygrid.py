@@ -192,14 +192,14 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
 
     ## Run grid ##
     processors = int(ray.cluster_resources()["CPU"])
-    cpu_per_worker = 16
-    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_worker), 
-                                        "MKL_NUM_THREADS": str(cpu_per_worker)})
-    ray_remote_args = {"num_cpus": cpu_per_worker, "runtime_env": runtime_env, 
+    cpu_per_process = 16
+    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
+                                        "MKL_NUM_THREADS": str(cpu_per_process)})
+    ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
                         "scheduling_strategy" : "DEFAULT", 
                         "max_restarts" : -1, "max_task_retries" : -1}
-    n_processes = (processors // cpu_per_worker)
-    # print(workers, cpu_per_worker, n_processes)
+    n_processes = (processors // cpu_per_process)
+    # print(workers, cpu_per_process, n_processes)
     length = len(masses)
     args = zip(masses, metallicities, v_surf_init_list,
                     range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
@@ -269,6 +269,9 @@ def stop_ray():
 def start_ray():
     ## this shell script stops all ray processing before starting new cluster
     subprocess.call("./rayCluster/ray-cluster.sh".split(" "), stdout=subprocess.DEVNULL)
+
+
+    
 
 if __name__ == "__main__":
     try:
