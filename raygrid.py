@@ -55,7 +55,8 @@ def evo_star(args):
     inlist_template = "./templates/inlist_template"
     failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
     retry = -1
-    dM = [1e-3, 2e-3, -1e-3, -2e-3]
+    # dM = [1e-3, 2e-3, -1e-3, -2e-3]
+    dM = [1e-3, -1e-3, 2e-3, -2e-3, 3e-3, -3e-3]
     while retry<len(dM) and failed:
         proj.clean()
         proj.make(silent=True)
@@ -184,7 +185,7 @@ def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.unmute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(evo_star, args)):
                 progressbar.advance(task)
 
