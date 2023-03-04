@@ -192,14 +192,13 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
 
     ## Run grid ##
     processors = int(ray.cluster_resources()["CPU"])
-    cpu_per_process = 16
+    cpu_per_process = 24
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
                                         "MKL_NUM_THREADS": str(cpu_per_process)})
     ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
                         "scheduling_strategy" : "DEFAULT", 
                         "max_restarts" : -1, "max_task_retries" : -1}
     n_processes = (processors // cpu_per_process)
-    # print(workers, cpu_per_process, n_processes)
     length = len(masses)
     args = zip(masses, metallicities, v_surf_init_list,
                     range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
@@ -281,7 +280,6 @@ if __name__ == "__main__":
             ## Start the ray cluster
             with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
                 start_ray()
-                # subprocess.call(["clear"])
             print("[b i][green]Ray cluster started.[/green]\n")
             ray.init(address="auto")
         print("\n[b i][blue]Ray cluster resources:[/blue]")
