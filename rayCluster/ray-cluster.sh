@@ -32,6 +32,8 @@ scriptPath=${4}
 ncpus=`$scriptPath/ncpus.sh physical`
 
 source $UHOME/.bashrc
+module restore MESA > /dev/null 2>&1
+export PATH=$PATH:$UHOME/.local/bin
 
 thisNodeIp=`hostname -i`
 ray start --address=$headNodeIpNport --num-cpus=$ncpus \
