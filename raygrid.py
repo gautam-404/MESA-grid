@@ -42,10 +42,6 @@ def evo_star(args):
 
     initial_mass = mass
     Zinit = metallicity
-
-    ## Get Parameters
-    terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
-    phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
     rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
                             'new_rotation_flag': True,
                             'change_initial_rotation_flag': True,
@@ -60,11 +56,13 @@ def evo_star(args):
     failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
     retry = -1
     dM = [1e-3, 2e-3, -1e-3, -2e-3]
-    while retry<len(dM) and failed is True:
+    while retry<len(dM) and failed:
         proj.clean()
         proj.make(silent=True)
         phases_params = helper.phases_params(initial_mass, Zinit)     
         phases_names = phases_params.keys()
+        terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
+        phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
         for phase_name in phases_names:
             try:
                 ## Run from inlist template by setting parameters for each phase
@@ -78,26 +76,19 @@ def evo_star(args):
                     proj.run(logging=logging, parallel=parallel)
                 else:
                     proj.resume(logging=logging, parallel=parallel)
-                failed = False
-            except (ValueError, FileNotFoundError) as e:
-                failed = True
-                print(e)
-                break
             except Exception as e:
                 failed = True
                 print(e)
-                print(f"[i red]{phase_name} run failed. Check run log for details.")
                 break
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
-            except:
-                failed = True
-                break
-        if failed is True:
+            else:
+                failed = False
+        if failed:
             retry += 1
-            initial_mass += dM[retry]
+            initial_mass = mass + dM[retry]
             with open(f"{name}/run.log", "a+") as f:
-                if retry == len(dM):
+                if retry == len(dM)-1:
                     f.write(f"Max retries reached. Model skipped!\n")
                     break
                 f.write(f"\nMass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
@@ -193,7 +184,7 @@ def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.unmute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(evo_star, args)):
                 progressbar.advance(task)
 
@@ -313,7 +304,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         ## Run only failed models
-        rerun_failed("grid_archive_run1", masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
+        rerun_failed("grid_archive_run1", masses, metallicities, v_surf_init_list, cpu_per_process=64, overwrite=True)
 
         # ## Run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
