@@ -71,5 +71,5 @@ http://localhost:8080\n" | tee -a ray.log
 
 export RAY_ADDRESS=$headNodeIpNport
 
-sleep $J
+sleep 10
 rm $PBS_O_WORKDIR/setupRayWorkerNode.sh
