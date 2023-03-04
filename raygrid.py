@@ -146,7 +146,6 @@ def run_gyre(dir_name, gyre_in, parallel=True):
         
 
 
-
 def run_grid(masses, metallicities, v_surf_init_list, gyre=False, 
             save_model=True, logging=True, overwrite=None):
     '''
@@ -282,6 +281,9 @@ if __name__ == "__main__":
                 # subprocess.call(["clear"])
             print("[b i][green]Ray cluster started.[/green]\n")
             ray.init(address="auto")
+        print("[b i][blue]Ray cluster resources:[/blue]")
+        print("CPUs: ", ray.cluster_resources()["CPU"])
+        print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
