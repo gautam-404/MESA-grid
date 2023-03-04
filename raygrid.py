@@ -2,7 +2,6 @@ import glob
 import os
 import shutil
 import tarfile
-import time
 from itertools import repeat
 import subprocess
 
@@ -95,13 +94,7 @@ def evo_star(args):
             ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
         
         ## Archive LOGS
-        shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
-        shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
-        if save_model:
-            compressed_file = f"grid_archive/models/model_{model}.tar.gz"
-            with tarfile.open(compressed_file,"w:gz") as tarhandle:
-                tarhandle.add(name, arcname=os.path.basename(name))
-        shutil.rmtree(name)
+        helper.archive_LOGS(name, model, save_model)
     else:
         if logging:         ## If the run failed, archive the log file
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
@@ -161,34 +154,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     '''
 
     ## Create archive directories
-    if os.path.exists("grid_archive"):
-        if overwrite:
-            shutil.rmtree("grid_archive")
-        else:
-            if overwrite is None:
-                if prompt.Confirm.ask("Overwrite existing grid_archive?"):
-                    shutil.rmtree("grid_archive")
-            if os.path.exists("grid_archive"):
-                print("Moving old grid_archive(s) to grid_archive_old(:)")
-                old = 0
-                while os.path.exists(f"grid_archive_old{old}"):
-                    old += 1
-                    if old >= 3:
-                        break
-                while old > 0:
-                    shutil.move(f"grid_archive_old{old-1}", f"grid_archive_old{old}")
-                    old -= 1
-                shutil.move("grid_archive", f"grid_archive_old{old}")    
-    os.mkdir("grid_archive")
-    os.mkdir("grid_archive/models")
-    os.mkdir("grid_archive/histories")
-    os.mkdir("grid_archive/profiles")
-    os.mkdir("grid_archive/gyre")
-    os.mkdir("grid_archive/failed")
-    ## Create work directory
-    if os.path.exists("gridwork"):
-        shutil.rmtree("gridwork")
-    os.mkdir("gridwork")
+    helper.create_grid_dirs(overwrite=overwrite)
 
     ## Run grid ##
     processors = int(ray.cluster_resources()["CPU"])
