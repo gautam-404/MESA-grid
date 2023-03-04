@@ -29,7 +29,7 @@ headNodeIpNport=${1}
 redisPassword=${2}
 UHOME=${3}
 scriptPath=${4}
-ncpus=`$scriptPath/ncpus.sh logical`
+ncpus=`$scriptPath/ncpus.sh physical`
 
 source $UHOME/.bashrc
 
@@ -48,7 +48,7 @@ do
         then
                 echo -e "\nStarting ray cluster on head node..."
                 source $UHOME/.bashrc
-                ncpus=`$scriptPath/ncpus.sh logical`
+                ncpus=`$scriptPath/ncpus.sh physical`
                 ray start --head --num-cpus=$ncpus --port=$rayPort --redis-password=$redisPassword --include-dashboard=true \
                 --dashboard-host=0.0.0.0 --dashboard-port=${rayDashboardPort} 2>&1 | tee >(sed -r 's/\x1b\[[0-9;]*m//g' > ray.log)
                 sleep 3
