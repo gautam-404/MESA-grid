@@ -207,7 +207,7 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(evo_star, args)):
                 progressbar.advance(task)
 

@@ -31,7 +31,14 @@ UHOME=${3}
 scriptPath=${4}
 ncpus=`$scriptPath/ncpus.sh physical`
 
-source $UHOME/.bashrc
+############ MESA environment variables ###############
+export MESASDK_ROOT=/scratch/ht06/ag9272/workspace/software/mesasdk
+source $MESASDK_ROOT/bin/mesasdk_init.sh
+export MESA_DIR=/scratch/ht06/ag9272/workspace/software/mesa-r22.11.1
+export OMP_NUM_THREADS=2      ## max should be 2 times the cores on your machine
+export GYRE_DIR=$MESA_DIR/gyre/gyre
+#######################################################
+
 module restore MESA > /dev/null 2>&1
 export PATH=$PATH:$UHOME/.local/bin
 
