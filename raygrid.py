@@ -16,25 +16,26 @@ import helper
 
 
 def evo_star(args):
-    '''Evolve a star
-    Args:   mass (optional, float): mass of star in solar masses
-            metallicity (optional, float): metallicity of star
-            v_surf_init (optional, float): initial surface rotation velocity in km/s
-            model (optional, int): model number, used by the code to name the model when parallelizing
-            gyre (optional, bool): whether to run gyre after evolution
-            save_model (optional, bool): whether to save the model
-            logging (optional, bool): whether to log the evolution
-            parallel (optional, bool): whether evolution is part of a parallel grid
-            silent (optional, bool): whether to suppress output
     '''
-    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
+    Run MESA evolution for a single star.
+    Args:
+        args (tuple): tuple of arguments
+            args[0] (float): initial mass
+            args[1] (float): metallicity
+            args[2] (float): initial surface rotation velocity
+            args[3] (str): model number
+            args[4] (bool): whether to run GYRE
+            args[5] (bool): whether to save the model
+            args[6] (bool): whether to log the evolution in a run.log file
+            args[7] (bool): whether this function is being run in parallel with ray
+    '''
+    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel = args
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     name = f"gridwork/work_{model}"
     proj = ProjectOps(name)     
     proj.create(overwrite=True) 
-    proj.make(silent=silent)
     star = MesaAccess(name)
     star.load_HistoryColumns("./templates/history_columns.list")
     star.load_ProfileColumns("./templates/profile_columns.list")
@@ -44,10 +45,7 @@ def evo_star(args):
 
     ## Get Parameters
     terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
-    phases_params = helper.phases_params(initial_mass, Zinit)     
-
     phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
-    phases_names = phases_params.keys()
     rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
                             'new_rotation_flag': True,
                             'change_initial_rotation_flag': True,
@@ -58,37 +56,56 @@ def evo_star(args):
                             'num_steps_to_relax_rotation' : 100, ## Default value is 100
                             'set_uniform_am_nu_non_rot': True}
 
-
     inlist_template = "./templates/inlist_template"
-    continue_forwards = True
-    for phase_name in phases_names:
-        try:                 ## Run from inlist template by setting parameters for each phase
-            star.load_InlistProject(inlist_template)
-            print(phase_name)
-            star.set(phases_params[phase_name], force=True)
-            star.set('max_age', phase_max_age.pop(0), force=True)
-            if phase_name == "Pre-MS Evolution":
-                ## Initiate rotation
-                star.set(rotation_init_params, force=True)
-                proj.run(logging=logging, parallel=parallel)
-            else:
-                proj.resume(logging=logging, parallel=parallel)
-        except (ValueError, FileNotFoundError) as e:
-            continue_forwards = False
-            print(e)
-            break
-        except Exception as e:
-            continue_forwards = False
-            print(e)
-            print(f"[i red]{phase_name} run failed. Check run log for details.")
-            break
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt
-        except:
-            continue_forwards = False
-            break
+    failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
+    retry = -1
+    dM = [1e-3, 2e-3, -1e-3, -2e-3]
+    while retry<len(dM) and failed is True:
+        proj.clean()
+        proj.make(silent=True)
+        phases_params = helper.phases_params(initial_mass, Zinit)     
+        phases_names = phases_params.keys()
+        for phase_name in phases_names:
+            try:
+                ## Run from inlist template by setting parameters for each phase
+                star.load_InlistProject(inlist_template)
+                print(phase_name)
+                star.set(phases_params[phase_name], force=True)
+                star.set('max_age', phase_max_age.pop(0), force=True)
+                if phase_name == "Pre-MS Evolution":
+                    ## Initiate rotation
+                    star.set(rotation_init_params, force=True)
+                    proj.run(logging=logging, parallel=parallel)
+                else:
+                    proj.resume(logging=logging, parallel=parallel)
+                failed = False
+            except (ValueError, FileNotFoundError) as e:
+                failed = True
+                print(e)
+                break
+            except Exception as e:
+                failed = True
+                print(e)
+                print(f"[i red]{phase_name} run failed. Check run log for details.")
+                break
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
+            except:
+                failed = True
+                break
+        if failed is True:
+            retry += 1
+            initial_mass += dM[retry]
+            with open(f"{name}/run.log", "a+") as f:
+                if retry == len(dM):
+                    f.write(f"Max retries reached. Model skipped!\n")
+                    break
+                f.write(f"\nMass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
+                f.write(f"Failed at phase: {phase_name}\n")
+                f.write(f"Retrying with dM = {dM[retry]}\n")
+                f.write(f"New initial mass: {initial_mass}\n")
 
-    if continue_forwards:
+    if not failed:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
             run_gyre(dir_name=name, gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), parallel = not parallel)   
             ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
@@ -98,9 +115,6 @@ def evo_star(args):
     else:
         if logging:         ## If the run failed, archive the log file
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
-            with open(f"grid_archive/failed/failed_{model}.log", "a") as f:
-                f.write(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
-                f.write(f"Failed at phase: {phase_name}")
         shutil.rmtree(name)
 
 
@@ -138,19 +152,23 @@ def run_gyre(dir_name, gyre_in, parallel=True):
         os.chdir("../..")
         
 
-
-def run_grid(masses, metallicities, v_surf_init_list, gyre=False, 
+def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_process=16, gyre=False, 
             save_model=True, logging=True, overwrite=None):
     '''
     Run the grid of models.
     Args:
-        parallel (optional, bool): whether to parallelize the evolution
-        show_progress (optional, bool): whether to show a progress bar
-        testrun (optional, bool): whether to run a test run
-        create_grid (optional, bool): whether to create the grid
-        save_model (optional, bool): whether to save the model
-        logging (optional, bool): whether to log the evolution
-        overwrite (optional, bool): whether to overwrite the grid_archive
+        masses (list): list of initial masses
+        metallicities (list): list of metallicities
+        v_surf_init_list (list): list of initial surface velocities
+        models_list (optional, list): model numbers corresponding to the grid points. 
+                                    If None, model numbers will be automatically assigned.
+        cpu_per_process (optional, int): number of CPUs to use per process
+        gyre (optional, bool): whether to run GYRE on the models
+        save_model (optional, bool): whether to save the model after the run
+        logging (optional, bool): whether to log the run
+        overwrite (optional, bool): whether to overwrite existing "gridwork" and "gridwork" directory. 
+                                    If False, the existing "grid_archive" directory will be renamed to "grid_archive_old".
+                                    If False, the existing "gridwork" will be overwritten nonetheless.
     '''
 
     ## Create archive directories
@@ -158,7 +176,6 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
 
     ## Run grid ##
     processors = int(ray.cluster_resources()["CPU"])
-    cpu_per_process = 16
     runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
                                         "MKL_NUM_THREADS": str(cpu_per_process)})
     ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
@@ -167,9 +184,11 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
     n_processes = (processors // cpu_per_process)
     # print(workers, cpu_per_process, n_processes)
     length = len(masses)
-    args = zip(masses, metallicities, v_surf_init_list,
-                    range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
-                    repeat(True), repeat(True))
+    if models_list is None:
+        models_list = range(1, length+1)
+    args = zip(masses, metallicities, v_surf_init_list, models_list,
+                    repeat(gyre), repeat(save_model), repeat(logging), 
+                    repeat(True))
        
     print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
@@ -178,7 +197,39 @@ def run_grid(masses, metallicities, v_surf_init_list, gyre=False,
             for i, res in enumerate(pool.imap_unordered(evo_star, args)):
                 progressbar.advance(task)
 
+
+
+
+def rerun_failed(grid_archive, masses, metallicities, v_surf_init_list, cpu_per_process=16,
+                gyre=False, save_model=True, logging=True, overwrite=None):
+    '''
+    Retry failed models
+    Args:
+        grid_archive (str): grid archive directory
+        gyre (optional, bool): whether to run GYRE on the models
+        save_model (optional, bool): whether to save the model
+        logging (optional, bool): whether to log the evolution
+        overwrite (optional, bool): whether to overwrite the grid_archive
+    '''
+    failed_models = glob.glob(f"{grid_archive}/failed/*")
+    print(f"[b i][blue]Running {len(failed_models)} previously failed models.[/blue]")
+    failed_masses = []
+    failed_metallicities = []
+    failed_v_surf_init_list = []
+    models_list = []
+    for model in failed_models:
+        i = int(model.split("/")[-1].split(".")[0].split("_")[-1])
+        failed_masses.append(masses[i-1])
+        failed_metallicities.append(metallicities[i-1])
+        failed_v_surf_init_list.append(v_surf_init_list[i-1])
+        models_list.append(i)
         
+    run_grid(failed_masses, failed_metallicities, failed_v_surf_init_list, 
+            models_list=models_list, cpu_per_process=cpu_per_process, gyre=gyre, 
+            save_model=save_model, logging=logging, overwrite=overwrite)
+        
+
+
 
 def init_grid(testrun=None, create_grid=True):
     '''
@@ -253,12 +304,16 @@ if __name__ == "__main__":
         print("\n[b i][blue]Ray cluster resources:[/blue]")
         print("CPUs: ", ray.cluster_resources()["CPU"])
         print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
+        print("Object Store Memory: ", ray.cluster_resources()["object_store_memory"]/1e9, "GB\n")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-        ## Run grid
-        run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
+        # ## Run grid
+        # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
+
+        ## Run only failed models
+        rerun_failed("grid_archive_run1", masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
