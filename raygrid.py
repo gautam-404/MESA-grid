@@ -59,6 +59,7 @@ def evo_star(args):
     #   max_residual > tol_max_residual           2    3.3535355297261565D-05    1.0000000000000001D-05
     # Then later: terminated evolution: hydro_failed
 
+    ## What worked:
     convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead, helps convergence
 
     inlist_template = "./templates/inlist_template"

@@ -43,9 +43,9 @@ def evo_star(mass, metallicity, v_surf_init, logging, parallel):
     ## WHAT DIDNT WORK
 
 
-    debug = True
+    debug = False
     # debug = {"report_solver_progress" : True, "report_ierr" : True, "solver_show_correction_info" : True}  ## Debug
-    debug = {"report_solver_progress" : True}  ## Debug
+    debug_params = {"report_solver_progress" : True}  ## Debug
 
     convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead
 
@@ -68,7 +68,7 @@ def evo_star(mass, metallicity, v_surf_init, logging, parallel):
                 star.set(phases_params[phase_name], force=True)
                 star.set('max_age', phase_max_age.pop(0), force=True)
                 if debug:
-                    star.set(debug, force=True)
+                    star.set(debug_params, force=True)
                 if phase_name == "Pre-MS Evolution":
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
