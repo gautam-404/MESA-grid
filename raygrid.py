@@ -51,10 +51,8 @@ def evo_star(args):
                             'relax_surface_rotation_v' : True,
                             'num_steps_to_relax_rotation' : 100, ## Default value is 100
                             'set_uniform_am_nu_non_rot': True}
-    
-    ## To help with convergence (only use for early preMS)
 
-    ## ISSUE: 
+    ## Failed Models, CONVERGENCE ISSUE: 
     #   max_residual > tol_max_residual           2    4.1542802224140270D-05    1.0000000000000001D-05
     #   max_residual > tol_max_residual           2    3.3535355297261565D-05    1.0000000000000001D-05
     # Then later: terminated evolution: hydro_failed
@@ -316,7 +314,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         ## Run only failed models
-        rerun_failed("grid_archive_run1", masses, metallicities, v_surf_init_list, cpu_per_process=64, overwrite=True)
+        rerun_failed("grid_archive_run1", masses, metallicities, v_surf_init_list, cpu_per_process=32, overwrite=True)
 
         # ## Run gyre
         # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
