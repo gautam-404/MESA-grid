@@ -58,8 +58,8 @@ def evo_star(args):
     # Then later: terminated evolution: hydro_failed
 
     ## What worked:
-    convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead, helps convergence
-
+    convergence_helper = {"convergence_ignore_equL_residuals" : True}  
+    
     inlist_template = "./templates/inlist_template"
     failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
     retry = -1
