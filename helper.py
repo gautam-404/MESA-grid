@@ -5,6 +5,7 @@ import shutil
 import tarfile
 import numpy as np
 from rich import progress, live, console, panel, prompt
+from contextlib import contextmanager
 
 
 Y_sun_phot = 0.2485 # Asplund+2009
@@ -177,7 +178,14 @@ def live_display(n):
     group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(scrap_age(n), expand=False))
     return live.Live(group), progressbar, group
 
-
+@contextmanager
+def cwd(path):
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
 
 def create_grid_dirs(overwrite=None):
     '''
@@ -224,8 +232,6 @@ def archive_LOGS(name, model, save_model):
         with tarfile.open(compressed_file,"w:gz") as tarhandle:
             tarhandle.add(name, arcname=os.path.basename(name))
     shutil.rmtree(name)
-
-
 
 
 

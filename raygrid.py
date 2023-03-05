@@ -7,7 +7,7 @@ import subprocess
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
-from rich import console, print, progress, prompt
+from rich import console, print, progress
 from ray.util.multiprocessing import Pool
 import ray
 from ray.runtime_env import RuntimeEnv
@@ -206,19 +206,32 @@ def gyre_parallel(args):
     '''
     Run GYRE on a tar.gz model
     '''
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
     model, dir_name, gyre_in = args
-    with tarfile.open(model, "r:gz") as tar:
-        tar.extractall()
-    name = model.split(".")[0].replace("model", "work")
-    print(f"[b][blue]Running GYRE on[/blue] {name}")
-    # Run GYRE
-    proj = ProjectOps(name)
-    proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False)
-    ## Archive GYRE output
-    os.mkdir(f"{dir_name}/gyre/freqs_{model}")
-    for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
-        shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
-    shutil.rmtree(name)
+    model = model.split("/")[-1]
+    models_dir = f"{dir_name}/models"
+    try:
+        with helper.cwd(models_dir):
+            with tarfile.open(model, "r:gz") as tar:
+                tar.extractall()
+            name = model.split(".")[0].replace("model", "work")
+            print(f"[b][blue]Running GYRE on[/blue] {name}")
+            # Run GYRE
+            proj = ProjectOps(name)
+            proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False)
+            ## Archive GYRE output
+            os.mkdir(f"{dir_name}/gyre/freqs_{model}")
+            for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
+                shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
+    except KeyboardInterrupt:
+        shutil.rmtree(name)
+        raise KeyboardInterrupt
+    except Exception as e:
+        shutil.rmtree(name)
+        print(e)
+        print(f"[b][red]Error running GYRE on {name}[/red]")
+
+
 
     
 
@@ -231,12 +244,11 @@ def run_gyre(dir_name, gyre_in, parallel=True, cpu_per_process=16):
     '''
     models_dir = f"{dir_name}/models/"
     gyre_in = os.path.abspath(gyre_in)
-    os.chdir(models_dir)
-    models = glob.glob(f"*tar.gz")
+    models = glob.glob(f"{models_dir}*tar.gz")
     args = zip(models, repeat(dir_name), repeat(gyre_in))
     length = len(models)
     ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
-    os.chdir("../..")
+    
         
 
 def ray_pool(func, args, length, cpu_per_process=16):
@@ -249,7 +261,7 @@ def ray_pool(func, args, length, cpu_per_process=16):
     n_processes = (processors // cpu_per_process)
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.unmute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(func, args)):
                 progressbar.advance(task)
 
@@ -286,7 +298,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_run1_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
