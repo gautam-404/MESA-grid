@@ -1,6 +1,7 @@
 gridwork/*
 grid_archive/*
 grid_archive_run*/*
+grid_archive_test*/*
 test/*
 software/*
 ray.log

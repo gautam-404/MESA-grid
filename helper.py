@@ -224,3 +224,44 @@ def archive_LOGS(name, model, save_model):
         with tarfile.open(compressed_file,"w:gz") as tarhandle:
             tarhandle.add(name, arcname=os.path.basename(name))
     shutil.rmtree(name)
+
+
+
+
+
+
+
+
+
+
+
+
+### temp function: used only when you want to run failed models, move to raygrid.py to use ###
+# def rerun_failed(grid_archive, masses, metallicities, v_surf_init_list, cpu_per_process=16,
+#                 gyre=False, save_model=True, logging=True, overwrite=None):
+#     '''
+#     Retry failed models
+#     Args:
+#         grid_archive (str): grid archive directory
+#         gyre (optional, bool): whether to run GYRE on the models
+#         save_model (optional, bool): whether to save the model
+#         logging (optional, bool): whether to log the evolution
+#         overwrite (optional, bool): whether to overwrite the grid_archive
+#     '''
+#     failed_models = glob.glob(f"{grid_archive}/failed/*")
+#     print(f"[b i][blue]Running {len(failed_models)} previously failed models.[/blue]")
+#     failed_masses = []
+#     failed_metallicities = []
+#     failed_v_surf_init_list = []
+#     models_list = []
+#     for model in failed_models:
+#         i = int(model.split("/")[-1].split(".")[0].split("_")[-1])
+#         failed_masses.append(masses[i-1])
+#         failed_metallicities.append(metallicities[i-1])
+#         failed_v_surf_init_list.append(v_surf_init_list[i-1])
+#         models_list.append(i)
+        
+#     run_grid(failed_masses, failed_metallicities, failed_v_surf_init_list, 
+#             models_list=models_list, cpu_per_process=cpu_per_process, gyre=gyre, 
+#             save_model=save_model, logging=logging, overwrite=overwrite)
+        

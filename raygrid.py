@@ -59,7 +59,7 @@ def evo_star(args):
 
     ## What worked:
     convergence_helper = {"convergence_ignore_equL_residuals" : True}  
-    
+
     inlist_template = "./templates/inlist_template"
     failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
     retry = -1
@@ -108,7 +108,8 @@ def evo_star(args):
 
     if not failed:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            run_gyre(dir_name=name, gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), parallel = not parallel)   
+            proj.runGyre(gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), 
+                        data_format="FGONG", files='all', logging=True, parallel = not parallel)   
             ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
         
         ## Archive LOGS
@@ -118,40 +119,6 @@ def evo_star(args):
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
         shutil.rmtree(name)
 
-
-
-
-def run_gyre(dir_name, gyre_in, parallel=True):
-    '''
-    Run GYRE on all models in the archive. OR run GYRE on a single model.
-    Args:       
-        dir_name (str): archive directory name
-        parallel (optional, bool): whether to parallelize the evolution
-    '''
-    models_dir = f"{dir_name}/models/"
-    gyre_in = os.path.abspath(gyre_in)
-    if not os.path.exists(models_dir):
-        # Run GYRE
-        proj = ProjectOps(dir_name)
-        proj.runGyre(gyre_in=gyre_in, data_format="FGONG", files='all', logging=True, parallel=parallel)
-    else:
-        os.chdir(models_dir)
-        models = sorted(glob.glob(f"*tar.gz"))
-        for model in models:
-            tarfile.open(model, "r:gz").extractall()
-            name = model.split(".")[0].replace("model", "work")
-            print(f"[b][blue]Running GYRE on[/blue] {name}")
-            # Run GYRE
-            proj = ProjectOps(name)
-            proj.runGyre(gyre_in=gyre_in, data_format="FGONG", files='all', logging=True, parallel=parallel)
-
-            ## Archive GYRE output
-            os.mkdir(f"{dir_name}/gyre/freqs_{model}")
-            for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
-                shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
-            shutil.rmtree(name)
-        os.chdir("../..")
-        
 
 def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_process=16, gyre=False, 
             save_model=True, logging=True, overwrite=None):
@@ -176,59 +143,13 @@ def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_
     helper.create_grid_dirs(overwrite=overwrite)
 
     ## Run grid ##
-    processors = int(ray.cluster_resources()["CPU"])
-    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
-                                        "MKL_NUM_THREADS": str(cpu_per_process)})
-    ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
-                        "scheduling_strategy" : "DEFAULT", 
-                        "max_restarts" : -1, "max_task_retries" : -1}
-    n_processes = (processors // cpu_per_process)
-    # print(workers, cpu_per_process, n_processes)
     length = len(masses)
     if models_list is None:
         models_list = range(1, length+1)
     args = zip(masses, metallicities, v_surf_init_list, models_list,
                     repeat(gyre), repeat(save_model), repeat(logging), 
                     repeat(True))
-       
-    print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
-    with progress.Progress(*helper.progress_columns()) as progressbar:
-        task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
-            for i, res in enumerate(pool.imap_unordered(evo_star, args)):
-                progressbar.advance(task)
-
-
-
-
-def rerun_failed(grid_archive, masses, metallicities, v_surf_init_list, cpu_per_process=16,
-                gyre=False, save_model=True, logging=True, overwrite=None):
-    '''
-    Retry failed models
-    Args:
-        grid_archive (str): grid archive directory
-        gyre (optional, bool): whether to run GYRE on the models
-        save_model (optional, bool): whether to save the model
-        logging (optional, bool): whether to log the evolution
-        overwrite (optional, bool): whether to overwrite the grid_archive
-    '''
-    failed_models = glob.glob(f"{grid_archive}/failed/*")
-    print(f"[b i][blue]Running {len(failed_models)} previously failed models.[/blue]")
-    failed_masses = []
-    failed_metallicities = []
-    failed_v_surf_init_list = []
-    models_list = []
-    for model in failed_models:
-        i = int(model.split("/")[-1].split(".")[0].split("_")[-1])
-        failed_masses.append(masses[i-1])
-        failed_metallicities.append(metallicities[i-1])
-        failed_v_surf_init_list.append(v_surf_init_list[i-1])
-        models_list.append(i)
-        
-    run_grid(failed_masses, failed_metallicities, failed_v_surf_init_list, 
-            models_list=models_list, cpu_per_process=cpu_per_process, gyre=gyre, 
-            save_model=save_model, logging=logging, overwrite=overwrite)
-        
+    ray_pool(evo_star, args, length, cpu_per_process=cpu_per_process)
 
 
 
@@ -280,6 +201,58 @@ def init_grid(testrun=None, create_grid=True):
         v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
     return masses, metallicities, v_surf_init_list
 
+
+def gyre_parallel(args):
+    '''
+    Run GYRE on a tar.gz model
+    '''
+    model, dir_name, gyre_in = args
+    with tarfile.open(model, "r:gz") as tar:
+        tar.extractall()
+    name = model.split(".")[0].replace("model", "work")
+    print(f"[b][blue]Running GYRE on[/blue] {name}")
+    # Run GYRE
+    proj = ProjectOps(name)
+    proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False)
+    ## Archive GYRE output
+    os.mkdir(f"{dir_name}/gyre/freqs_{model}")
+    for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
+        shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
+    shutil.rmtree(name)
+
+    
+
+def run_gyre(dir_name, gyre_in, parallel=True, cpu_per_process=16):
+    '''
+    Run GYRE on all models in the archive. OR run GYRE on a single model.
+    Args:       
+        dir_name (str): archive directory name
+        parallel (optional, bool): whether to parallelize the evolution
+    '''
+    models_dir = f"{dir_name}/models/"
+    gyre_in = os.path.abspath(gyre_in)
+    os.chdir(models_dir)
+    models = glob.glob(f"*tar.gz")
+    args = zip(models, repeat(dir_name), repeat(gyre_in))
+    length = len(models)
+    ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
+    os.chdir("../..")
+        
+
+def ray_pool(func, args, length, cpu_per_process=16):
+    processors = int(ray.cluster_resources()["CPU"])
+    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
+                                        "MKL_NUM_THREADS": str(cpu_per_process)})
+    ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
+                        "scheduling_strategy" : "DEFAULT", 
+                        "max_restarts" : -1, "max_task_retries" : -1}
+    n_processes = (processors // cpu_per_process)
+    with progress.Progress(*helper.progress_columns()) as progressbar:
+        task = progressbar.add_task("[b i green]Running...", total=length)
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+            for i, res in enumerate(pool.imap_unordered(func, args)):
+                progressbar.advance(task)
+
 def stop_ray():
     subprocess.call("ray stop --force".split(" "))
     subprocess.call("killall -9 pbs_tmrsh".split(" "))
@@ -287,7 +260,6 @@ def stop_ray():
 def start_ray():
     ## this shell script stops all ray processing before starting new cluster
     subprocess.call("./rayCluster/ray-cluster.sh".split(" "), stdout=subprocess.DEVNULL)
-
 
     
 
@@ -313,11 +285,8 @@ if __name__ == "__main__":
         # ## Run grid
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
-        ## Run only failed models
-        rerun_failed("grid_archive_run1", masses, metallicities, v_surf_init_list, cpu_per_process=32, overwrite=True)
-
         # ## Run gyre
-        # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
+        run_gyre(dir_name="grid_archive_run1_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
