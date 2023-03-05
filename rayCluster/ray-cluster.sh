@@ -65,7 +65,7 @@ done
 
 echo -e "\nRay cluster setup complete.\n\
 Forward the ray dashboard port to localhost using the following command:\n\
-ssh -N -L 8080:0.0.0.0:$rayDashboardPort $USER@$headNodeDnsIp -J $USER@_gateway_\n\
+ssh -N -L 7711:0.0.0.0:$rayDashboardPort $USER@$headNodeDnsIp -J $USER@_gateway_\n\
 Then open the following link in your browser:\n\
 http://localhost:8080\n" | tee -a ray.log
 
