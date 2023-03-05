@@ -242,8 +242,7 @@ def run_gyre(dir_name, gyre_in, cpu_per_process=16):
     except KeyboardInterrupt:
         [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
         tmp = os.path.join(models_archive, "work*")
-        os.system(f"rm -rf {tmp} > /dev/null 2>&1")
-        os.system(f"rm -rf {tmp} > /dev/null 2>&1")
+        os.system(f"rm -rf {tmp} > /dev/null 2>&1") ## one of the folders might not be deleted... -_-
         print("[b][red]GYRE stopped.")
         raise KeyboardInterrupt
     except Exception as e:
@@ -299,7 +298,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=128)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=16)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
