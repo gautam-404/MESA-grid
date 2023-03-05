@@ -2,6 +2,9 @@ gridwork/*
 grid_archive/*
 grid_archive_run*/*
 grid_archive_test*/*
+grid_archive_run*.tar
+grid_archive_run*.tar.gz
+grid_archive_run*.tar.lz4
 test/*
 software/*
 ray.log

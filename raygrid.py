@@ -203,52 +203,53 @@ def init_grid(testrun=None, create_grid=True):
 
 
 def gyre_parallel(args):
-    '''
-    Run GYRE on a tar.gz model
-    '''
+    '''Run GYRE on a tar.gz model'''
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
     model, dir_name, gyre_in = args
     model = model.split("/")[-1]
-    models_dir = f"{dir_name}/models"
-    try:
-        with helper.cwd(models_dir):
-            with tarfile.open(model, "r:gz") as tar:
-                tar.extractall()
-            name = model.split(".")[0].replace("model", "work")
-            print(f"[b][blue]Running GYRE on[/blue] {name}")
-            # Run GYRE
-            proj = ProjectOps(name)
-            proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False)
-            ## Archive GYRE output
-            os.mkdir(f"{dir_name}/gyre/freqs_{model}")
-            for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
-                shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
-    except KeyboardInterrupt:
-        shutil.rmtree(name)
-        raise KeyboardInterrupt
-    except Exception as e:
-        shutil.rmtree(name)
-        print(e)
-        print(f"[b][red]Error running GYRE on {name}[/red]")
+    models_archive = os.path.abspath(f"{dir_name}/models")
+    gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{model}")
+    with helper.cwd(models_archive):
+        with tarfile.open(model, "r:gz") as tar:
+            tar.extractall()
+        name = model.split(".")[0].replace("model", "work")
+        print(f"[b][blue]Running GYRE on[/blue] {name}")
+        # Run GYRE
+        proj = ProjectOps(name)
+        proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False)
+        ## Archive GYRE output
+        os.mkdir(gyre_archive)
+        for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
+            shutil.copy(file, gyre_archive)
 
 
 
-    
-
-def run_gyre(dir_name, gyre_in, parallel=True, cpu_per_process=16):
+def run_gyre(dir_name, gyre_in, cpu_per_process=16):
     '''
     Run GYRE on all models in the archive. OR run GYRE on a single model.
     Args:       
         dir_name (str): archive directory name
         parallel (optional, bool): whether to parallelize the evolution
     '''
-    models_dir = f"{dir_name}/models/"
+    models_archive = os.path.abspath(f"{dir_name}/models/")
+    gyre_archive = os.path.abspath(f"{dir_name}/gyre/")
     gyre_in = os.path.abspath(gyre_in)
-    models = glob.glob(f"{models_dir}*tar.gz")
+    models = glob.glob(os.path.join(models_archive, "*.tar.gz"))
     args = zip(models, repeat(dir_name), repeat(gyre_in))
     length = len(models)
-    ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
-    
+    try:
+        ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
+    except KeyboardInterrupt:
+        [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
+        tmp = os.path.join(models_archive, "work*")
+        os.system(f"rm -rf {tmp} > /dev/null 2>&1")
+        os.system(f"rm -rf {tmp} > /dev/null 2>&1")
+        print("[b][red]GYRE stopped.")
+        raise KeyboardInterrupt
+    except Exception as e:
+        print("[b][red]GYRE run failed. Check run logs.")
+        raise e
+
         
 
 def ray_pool(func, args, length, cpu_per_process=16):
@@ -298,7 +299,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=128)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
