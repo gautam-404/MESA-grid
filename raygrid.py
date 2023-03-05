@@ -51,12 +51,20 @@ def evo_star(args):
                             'relax_surface_rotation_v' : True,
                             'num_steps_to_relax_rotation' : 100, ## Default value is 100
                             'set_uniform_am_nu_non_rot': True}
+    
+    ## To help with convergence (only use for early preMS)
+
+    ## ISSUE: 
+    #   max_residual > tol_max_residual           2    4.1542802224140270D-05    1.0000000000000001D-05
+    #   max_residual > tol_max_residual           2    3.3535355297261565D-05    1.0000000000000001D-05
+    # Then later: terminated evolution: hydro_failed
+
+    convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead, helps convergence
 
     inlist_template = "./templates/inlist_template"
     failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
     retry = -1
-    # dM = [1e-3, 2e-3, -1e-3, -2e-3]
-    dM = [1e-3, -1e-3, 2e-3, -2e-3, 3e-3, -3e-3]
+    dM = [0, 1e-3, -1e-3, 2e-3, -2e-3]
     while retry<len(dM) and failed:
         proj.clean()
         proj.make(silent=True)
@@ -74,6 +82,8 @@ def evo_star(args):
                 if phase_name == "Pre-MS Evolution":
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
+                    if retry>=0:
+                        star.set(convergence_helper, force=True)
                     proj.run(logging=logging, parallel=parallel)
                 else:
                     proj.resume(logging=logging, parallel=parallel)
