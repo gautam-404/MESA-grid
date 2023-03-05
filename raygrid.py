@@ -261,7 +261,7 @@ def ray_pool(func, args, length, cpu_per_process=16):
     n_processes = (processors // cpu_per_process)
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.unmute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(func, args)):
                 progressbar.advance(task)
 
