@@ -122,7 +122,8 @@
 
 	! Convergence checking
 	use_gold_tolerances = .true.
-	!use_dedt_form_of_energy_eqn = .true.		!! Not a prameter in MESA r22.11.1
+	energy_eqn_option = 'dedt'			!! Options are 'dedt' or 'eps_grav'. 'dedt' 
+										!! 'dedt' employs a conservative equation for the local specific total energy.
 
 
 / ! end of controls namelist
