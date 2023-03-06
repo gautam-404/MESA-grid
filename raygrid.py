@@ -4,6 +4,8 @@ import shutil
 import tarfile
 from itertools import repeat
 import subprocess
+import traceback
+import logging
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
@@ -205,21 +207,29 @@ def init_grid(testrun=None, create_grid=True):
 def gyre_parallel(args):
     '''Run GYRE on a tar.gz model'''
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
-    model, dir_name, gyre_in = args
+    model, dir_name, gyre_in, cpu_per_process = args
     model = model.split("/")[-1]
     models_archive = os.path.abspath(f"{dir_name}/models")
     gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{model}")
-    with helper.cwd(models_archive):
-        with tarfile.open(model, "r:gz") as tar:
-            tar.extractall()
-        name = model.split(".")[0].replace("model", "work")
-        print(f"[b][blue]Running GYRE on[/blue] {name}")
-        # Run GYRE
-        proj = ProjectOps(name)
-        proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False)
+    try:
+        with helper.cwd(models_archive):
+            with tarfile.open(model, "r:gz") as tar:
+                tar.extractall()
+            name = model.split(".")[0].replace("model", "work")
+            work_dir = os.path.abspath(os.path.join(models_archive, name))
+            print(f"[b][blue]Running GYRE on[/blue] {name}")
+            # Run GYRE
+            proj = ProjectOps(name)
+            os.environ['OMP_NUM_THREADS'] = '4'
+            proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
+    except Exception as e:
+        print(f"[b][red]Error running GYRE on[/red] {name}")
+        logging.error(traceback.format_exc())
+        raise e
+    finally:
         ## Archive GYRE output
         os.mkdir(gyre_archive)
-        for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
+        for file in glob.glob(os.path.join(work_dir, "LOGS/*-freqs.dat")):
             shutil.copy(file, gyre_archive)
 
 
@@ -235,11 +245,12 @@ def run_gyre(dir_name, gyre_in, cpu_per_process=16):
     gyre_archive = os.path.abspath(f"{dir_name}/gyre/")
     gyre_in = os.path.abspath(gyre_in)
     models = glob.glob(os.path.join(models_archive, "*.tar.gz"))
-    args = zip(models, repeat(dir_name), repeat(gyre_in))
+    args = zip(models, repeat(dir_name), repeat(gyre_in), repeat(cpu_per_process))
     length = len(models)
     try:
         ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
     except KeyboardInterrupt:
+        print("[b][red]GYRE interrupted. Cleaning up.")
         [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
         tmp = os.path.join(models_archive, "work*")
         os.system(f"rm -rf {tmp} > /dev/null 2>&1") ## one of the folders might not be deleted... -_-
@@ -261,7 +272,7 @@ def ray_pool(func, args, length, cpu_per_process=16):
     n_processes = (processors // cpu_per_process)
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.unmute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(func, args)):
                 progressbar.advance(task)
 
@@ -298,14 +309,12 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=16)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=64)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
         print("[b i][red]Ray cluster stopped.[/red]\n")
     except Exception as e:
-        import traceback
-        import logging
         logging.error(traceback.format_exc())
         print("[b i][red]Encountered an error.[/red]\n")
         stop_ray()
