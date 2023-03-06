@@ -6,6 +6,7 @@ from itertools import repeat
 import subprocess
 import traceback
 import logging
+import time
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
@@ -220,7 +221,7 @@ def gyre_parallel(args):
             print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
-            os.environ['OMP_NUM_THREADS'] = '8'
+            os.environ['OMP_NUM_THREADS'] = '4'
             proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
     except Exception as e:
         print(f"[b][red]Error running GYRE on[/red] {name}")
@@ -231,6 +232,10 @@ def gyre_parallel(args):
         os.mkdir(gyre_archive)
         for file in glob.glob(os.path.join(work_dir, "LOGS/*-freqs.dat")):
             shutil.copy(file, gyre_archive)
+        ## Remove work directory
+        for i in range(5):              ## Try 5 times, then give up. NFS is weird. Gotta wait and retry.
+            os.system(f"rm -rf {work_dir} > /dev/null 2>&1")
+            time.sleep(0.5)             ## Wait for the process, that has the nfs files open, to die/diconnect
 
 
 
@@ -250,6 +255,7 @@ def run_gyre(dir_name, gyre_in, cpu_per_process=16):
     try:
         ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
     except KeyboardInterrupt:
+
         print("[b][red]GYRE interrupted. Cleaning up.")
         [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
         tmp = os.path.join(models_archive, "work*")
@@ -310,7 +316,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=128)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
