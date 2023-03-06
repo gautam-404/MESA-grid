@@ -220,7 +220,7 @@ def gyre_parallel(args):
             print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
-            os.environ['OMP_NUM_THREADS'] = '4'
+            os.environ['OMP_NUM_THREADS'] = '8'
             proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
     except Exception as e:
         print(f"[b][red]Error running GYRE on[/red] {name}")
@@ -270,9 +270,10 @@ def ray_pool(func, args, length, cpu_per_process=16):
                         "scheduling_strategy" : "DEFAULT", 
                         "max_restarts" : -1, "max_task_retries" : -1}
     n_processes = (processors // cpu_per_process)
+    print(f"[b][blue]Running {min([n_processes, length])} parallel processes on {processors} cores.[/blue]")
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(ray_address="auto", processes=n_processes, initializer=helper.unmute, ray_remote_args=ray_remote_args) as pool:
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
             for i, res in enumerate(pool.imap_unordered(func, args)):
                 progressbar.advance(task)
 
@@ -309,7 +310,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=64)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
