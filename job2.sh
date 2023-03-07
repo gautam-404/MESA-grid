@@ -1,10 +1,10 @@
 #!/bin/bash -l
  
-#PBS -N GYRE
+#PBS -N GYREmedium
 #PBS -P 0201
 #PBS -q default
-#PBS -l select=4:ncpus=128:mem=256GB
-#PBS -l walltime=12:00:00
+#PBS -l select=1:ncpus=128:mem=128GB
+#PBS -l walltime=72:00:00
 #PBS -M anuj.gautam@usq.edu.au
 #PBS -m abe
 

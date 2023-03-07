@@ -224,12 +224,19 @@ def create_grid_dirs(overwrite=None):
     os.mkdir("gridwork")
 
 
-def archive_LOGS(name, model, save_model):
+def archive_LOGS(name, model, save_model, gyre):
+    path = os.path.abspath(os.path.join(os.getcwd().split("MESA-grid")[0], "MESA-grid"))
+    os.chdir(path)
     shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
     shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
+    if gyre:
+        gyre_archive = os.path.abspath(f"grid_archive/gyre/freqs_{model}")
+        os.mkdir(gyre_archive)
+        for file in glob.glob(os.path.join(name, "LOGS/*-freqs.dat")):
+            shutil.copy(file, gyre_archive)
     if save_model:
         compressed_file = f"grid_archive/models/model_{model}.tar.gz"
-        with tarfile.open(compressed_file,"w:gz") as tarhandle:
+        with tarfile.open(compressed_file, "w:gz") as tarhandle:
             tarhandle.add(name, arcname=os.path.basename(name))
     shutil.rmtree(name)
 

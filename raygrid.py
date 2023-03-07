@@ -32,7 +32,7 @@ def evo_star(args):
             args[6] (bool): whether to log the evolution in a run.log file
             args[7] (bool): whether this function is being run in parallel with ray
     '''
-    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel = args
+    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, cpu_this_process = args
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
@@ -111,9 +111,9 @@ def evo_star(args):
 
     if not failed:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            proj.runGyre(gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), 
-                        data_format="FGONG", files='all', logging=True, parallel = not parallel)   
-            ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
+            os.environ['OMP_NUM_THREADS'] = '2'
+            ## Run GYRE on multiple profile files parallely
+            proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_this_process)
         
         ## Archive LOGS
         helper.archive_LOGS(name, model, save_model)
@@ -151,7 +151,7 @@ def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_
         models_list = range(1, length+1)
     args = zip(masses, metallicities, v_surf_init_list, models_list,
                     repeat(gyre), repeat(save_model), repeat(logging), 
-                    repeat(True))
+                    repeat(True), repeat(cpu_per_process))
     ray_pool(evo_star, args, length, cpu_per_process=cpu_per_process)
 
 
@@ -221,8 +221,13 @@ def gyre_parallel(args):
             print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
-            os.environ['OMP_NUM_THREADS'] = '4'
+            os.environ['OMP_NUM_THREADS'] = '8'
+
+            ## Run GYRE on multiple profile files parallely
             proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
+            
+            # ## Run GYRE on each profile file sequentially
+            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False, n_cores=cpu_per_process)
     except Exception as e:
         print(f"[b][red]Error running GYRE on[/red] {name}")
         logging.error(traceback.format_exc())
@@ -316,7 +321,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=16)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
