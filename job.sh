@@ -1,6 +1,6 @@
 #!/bin/bash
  
-#PBS -l ncpus=6240
+#PBS -l ncpus=18720
 #PBS -l mem=2TB
 #PBS -l jobfs=300GB
 #PBS -q normal

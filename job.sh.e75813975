@@ -1,0 +1,14 @@
+=== ERROR ===
+The use of the 'python' command to launch a python script
+has been deprecated. Please run either
+
+python3 raygrid.py
+
+or
+
+python2 raygrid.py
+
+depending on which version of python you require
+Alternatively, if you are unable to modify this script
+You can load the python2-as-python or python3-as-python
+modules depending on which version of python you require

@@ -111,17 +111,20 @@ def evo_star(args):
 
     if not failed:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            os.environ['OMP_NUM_THREADS'] = '4'
+            os.environ['OMP_NUM_THREADS'] = '6'
             ## Run GYRE on multiple profile files parallely
             proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files='all', data_format="FGONG", 
                         logging=False, parallel=True, n_cores=cpu_this_process)
         
         ## Archive LOGS
-        helper.archive_LOGS(name, model, save_model)
+        helper.archive_LOGS(name, model, save_model, gyre)
     else:
         if logging:         ## If the run failed, archive the log file
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
         shutil.rmtree(name)
+
+
+
 
 
 def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_process=16, gyre=False, 
@@ -154,6 +157,7 @@ def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_
                     repeat(gyre), repeat(save_model), repeat(logging), 
                     repeat(True), repeat(cpu_per_process))
     ray_pool(evo_star, args, length, cpu_per_process=cpu_per_process)
+
 
 
 
@@ -222,7 +226,7 @@ def gyre_parallel(args):
             print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
-            os.environ['OMP_NUM_THREADS'] = '4'
+            os.environ['OMP_NUM_THREADS'] = '8'
 
             ## Run GYRE on multiple profile files parallely
             proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
@@ -319,7 +323,7 @@ if __name__ == "__main__":
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
         # ## Run grid
-        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=12, overwrite=True)
+        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=24, overwrite=True, gyre=True)
 
         # ## Run gyre
         # run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
