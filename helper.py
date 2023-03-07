@@ -1,9 +1,12 @@
 import os
 import sys
 import glob
-
+import shutil
+import tarfile
 import numpy as np
-from rich import progress, live, console, panel
+from rich import progress, live, console, panel, prompt
+from contextlib import contextmanager
+
 
 Y_sun_phot = 0.2485 # Asplund+2009
 Y_sun_bulk = 0.2703 # Asplund+2009
@@ -174,3 +177,97 @@ def live_display(n):
     progressbar = progress.Progress(*progress_columns(), disable=False)
     group = console.Group(panel.Panel(progressbar, expand=False), panel.Panel(scrap_age(n), expand=False))
     return live.Live(group), progressbar, group
+
+@contextmanager
+def cwd(path):
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
+
+def create_grid_dirs(overwrite=None):
+    '''
+    Create grid directories. 
+    Args:   overwrite (bool): overwrite existing grid directories.
+                            If overwrite is None, prompt user to overwrite existing grid directories.
+    '''
+    ## Create archive directories
+    if os.path.exists("grid_archive"):
+        if overwrite:
+            shutil.rmtree("grid_archive")
+        else:
+            if overwrite is None:
+                if prompt.Confirm.ask("Overwrite existing grid_archive?"):
+                    shutil.rmtree("grid_archive")
+            if os.path.exists("grid_archive"):
+                print("Moving old grid_archive(s) to grid_archive_old(:)")
+                old = 0
+                while os.path.exists(f"grid_archive_old{old}"):
+                    old += 1
+                    if old >= 3:
+                        break
+                while old > 0:
+                    shutil.move(f"grid_archive_old{old-1}", f"grid_archive_old{old}")
+                    old -= 1
+                shutil.move("grid_archive", f"grid_archive_old{old}")    
+    os.mkdir("grid_archive")
+    os.mkdir("grid_archive/models")
+    os.mkdir("grid_archive/histories")
+    os.mkdir("grid_archive/profiles")
+    os.mkdir("grid_archive/gyre")
+    os.mkdir("grid_archive/failed")
+    ## Create work directory
+    if os.path.exists("gridwork"):
+        shutil.rmtree("gridwork")
+    os.mkdir("gridwork")
+
+
+def archive_LOGS(name, model, save_model):
+    shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
+    shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
+    if save_model:
+        compressed_file = f"grid_archive/models/model_{model}.tar.gz"
+        with tarfile.open(compressed_file,"w:gz") as tarhandle:
+            tarhandle.add(name, arcname=os.path.basename(name))
+    shutil.rmtree(name)
+
+
+
+
+
+
+
+
+
+
+### temp function: used only when you want to run failed models, move to raygrid.py to use ###
+# def rerun_failed(grid_archive, masses, metallicities, v_surf_init_list, cpu_per_process=16,
+#                 gyre=False, save_model=True, logging=True, overwrite=None):
+#     '''
+#     Retry failed models
+#     Args:
+#         grid_archive (str): grid archive directory
+#         gyre (optional, bool): whether to run GYRE on the models
+#         save_model (optional, bool): whether to save the model
+#         logging (optional, bool): whether to log the evolution
+#         overwrite (optional, bool): whether to overwrite the grid_archive
+#     '''
+#     failed_models = glob.glob(f"{grid_archive}/failed/*")
+#     print(f"[b i][blue]Running {len(failed_models)} previously failed models.[/blue]")
+#     failed_masses = []
+#     failed_metallicities = []
+#     failed_v_surf_init_list = []
+#     models_list = []
+#     for model in failed_models:
+#         i = int(model.split("/")[-1].split(".")[0].split("_")[-1])
+#         failed_masses.append(masses[i-1])
+#         failed_metallicities.append(metallicities[i-1])
+#         failed_v_surf_init_list.append(v_surf_init_list[i-1])
+#         models_list.append(i)
+        
+#     run_grid(failed_masses, failed_metallicities, failed_v_surf_init_list, 
+#             models_list=models_list, cpu_per_process=cpu_per_process, gyre=gyre, 
+#             save_model=save_model, logging=logging, overwrite=overwrite)
+        

@@ -2,13 +2,15 @@ import glob
 import os
 import shutil
 import tarfile
-import time
 from itertools import repeat
 import subprocess
+import traceback
+import logging
+import time
 
 import numpy as np
 from MESAcontroller import MesaAccess, ProjectOps
-from rich import console, print, progress, prompt
+from rich import console, print, progress
 from ray.util.multiprocessing import Pool
 import ray
 from ray.runtime_env import RuntimeEnv
@@ -16,39 +18,33 @@ from ray.runtime_env import RuntimeEnv
 import helper
 
 
-def evo_star(args):
-    '''Evolve a star
-    Args:   mass (optional, float): mass of star in solar masses
-            metallicity (optional, float): metallicity of star
-            v_surf_init (optional, float): initial surface rotation velocity in km/s
-            model (optional, int): model number, used by the code to name the model when parallelizing
-            gyre (optional, bool): whether to run gyre after evolution
-            save_model (optional, bool): whether to save the model
-            logging (optional, bool): whether to log the evolution
-            parallel (optional, bool): whether evolution is part of a parallel grid
-            silent (optional, bool): whether to suppress output
+def evo_star(*args):
     '''
-    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, silent = args
+    Run MESA evolution for a single star.
+    Args:
+        args (tuple): tuple of arguments
+            args[0] (float): initial mass
+            args[1] (float): metallicity
+            args[2] (float): initial surface rotation velocity
+            args[3] (str): model number
+            args[4] (bool): whether to run GYRE
+            args[5] (bool): whether to save the model
+            args[6] (bool): whether to log the evolution in a run.log file
+            args[7] (bool): whether this function is being run in parallel with ray
+    '''
+    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel = args
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     name = f"gridwork/work_{model}"
     proj = ProjectOps(name)     
     proj.create(overwrite=True) 
-    proj.make(silent=silent)
     star = MesaAccess(name)
     star.load_HistoryColumns("./templates/history_columns.list")
     star.load_ProfileColumns("./templates/profile_columns.list")
 
     initial_mass = mass
     Zinit = metallicity
-
-    ## Get Parameters
-    terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
-    phases_params = helper.phases_params(initial_mass, Zinit)     
-
-    phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
-    phases_names = phases_params.keys()
     rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
                             'new_rotation_flag': True,
                             'change_initial_rotation_flag': True,
@@ -59,159 +55,106 @@ def evo_star(args):
                             'num_steps_to_relax_rotation' : 100, ## Default value is 100
                             'set_uniform_am_nu_non_rot': True}
 
+    ## Failed Models, CONVERGENCE ISSUE: 
+    #   max_residual > tol_max_residual           2    4.1542802224140270D-05    1.0000000000000001D-05
+    #   max_residual > tol_max_residual           2    3.3535355297261565D-05    1.0000000000000001D-05
+    # Then later: terminated evolution: hydro_failed
+
+    ## What worked:
+    convergence_helper = {"convergence_ignore_equL_residuals" : True}  
 
     inlist_template = "./templates/inlist_template"
-    continue_forwards = True
-    for phase_name in phases_names:
-        try:                 ## Run from inlist template by setting parameters for each phase
-            star.load_InlistProject(inlist_template)
-            print(phase_name)
-            star.set(phases_params[phase_name], force=True)
-            star.set('max_age', phase_max_age.pop(0), force=True)
-            if phase_name == "Pre-MS Evolution":
-                ## Initiate rotation
-                star.set(rotation_init_params, force=True)
-                proj.run(logging=logging, parallel=parallel)
+    failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
+    retry = -1
+    dM = [0, 1e-3, -1e-3, 2e-3, -2e-3]
+    while retry<len(dM) and failed:
+        proj.clean()
+        proj.make(silent=True)
+        phases_params = helper.phases_params(initial_mass, Zinit)     
+        phases_names = phases_params.keys()
+        terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
+        phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to a coarser timestep
+        for phase_name in phases_names:
+            try:
+                ## Run from inlist template by setting parameters for each phase
+                star.load_InlistProject(inlist_template)
+                print(phase_name)
+                star.set(phases_params[phase_name], force=True)
+                star.set('max_age', phase_max_age.pop(0), force=True)
+                if phase_name == "Pre-MS Evolution":
+                    ## Initiate rotation
+                    star.set(rotation_init_params, force=True)
+                    if retry>=0:
+                        star.set(convergence_helper, force=True)
+                    proj.run(logging=logging, parallel=parallel)
+                else:
+                    proj.resume(logging=logging, parallel=parallel)
+            except Exception as e:
+                failed = True
+                print(e)
+                break
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
             else:
-                proj.resume(logging=logging, parallel=parallel)
-        except (ValueError, FileNotFoundError) as e:
-            continue_forwards = False
-            print(e)
-            break
-        except Exception as e:
-            continue_forwards = False
-            print(e)
-            print(f"[i red]{phase_name} run failed. Check run log for details.")
-            break
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt
-        except:
-            continue_forwards = False
-            break
+                failed = False
+        if failed:
+            retry += 1
+            initial_mass = mass + dM[retry]
+            with open(f"{name}/run.log", "a+") as f:
+                if retry == len(dM)-1:
+                    f.write(f"Max retries reached. Model skipped!\n")
+                    break
+                f.write(f"\nMass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
+                f.write(f"Failed at phase: {phase_name}\n")
+                f.write(f"Retrying with dM = {dM[retry]}\n")
+                f.write(f"New initial mass: {initial_mass}\n")
 
-    if continue_forwards:
+    if not failed:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            run_gyre(dir_name=name, gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), parallel = not parallel)   
+            proj.runGyre(gyre_in=os.path.abspath("templates/gyre_rot_template_dipole.in"), 
+                        data_format="FGONG", files='all', logging=True, parallel = not parallel)   
             ## Run GYRE on the model. If grid is run in parallel, GYRE is run in serial and vice versa
         
         ## Archive LOGS
-        shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
-        shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
-        if save_model:
-            compressed_file = f"grid_archive/models/model_{model}.tar.gz"
-            with tarfile.open(compressed_file,"w:gz") as tarhandle:
-                tarhandle.add(name, arcname=os.path.basename(name))
-        shutil.rmtree(name)
+        helper.archive_LOGS(name, model, save_model)
     else:
         if logging:         ## If the run failed, archive the log file
             shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
-            with open(f"grid_archive/failed/failed_{model}.log", "a") as f:
-                f.write(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
-                f.write(f"Failed at phase: {phase_name}")
         shutil.rmtree(name)
 
 
-
-
-def run_gyre(dir_name, gyre_in, parallel=True):
-    '''
-    Run GYRE on all models in the archive. OR run GYRE on a single model.
-    Args:       
-        dir_name (str): archive directory name
-        parallel (optional, bool): whether to parallelize the evolution
-    '''
-    models_dir = f"{dir_name}/models/"
-    gyre_in = os.path.abspath(gyre_in)
-    if not os.path.exists(models_dir):
-        # Run GYRE
-        proj = ProjectOps(dir_name)
-        proj.runGyre(gyre_in=gyre_in, data_format="FGONG", files='all', logging=True, parallel=parallel)
-    else:
-        os.chdir(models_dir)
-        models = sorted(glob.glob(f"*tar.gz"))
-        for model in models:
-            tarfile.open(model, "r:gz").extractall()
-            name = model.split(".")[0].replace("model", "work")
-            print(f"[b][blue]Running GYRE on[/blue] {name}")
-            # Run GYRE
-            proj = ProjectOps(name)
-            proj.runGyre(gyre_in=gyre_in, data_format="FGONG", files='all', logging=True, parallel=parallel)
-
-            ## Archive GYRE output
-            os.mkdir(f"{dir_name}/gyre/freqs_{model}")
-            for file in glob.glob(f"{name}/LOGS/*-freqs.dat"):
-                shutil.copy(file, f"{dir_name}/gyre/freqs_{model}")
-            shutil.rmtree(name)
-        os.chdir("../..")
-        
-
-
-def run_grid(masses, metallicities, v_surf_init_list, gyre=False, 
+def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_process=16, gyre=False, 
             save_model=True, logging=True, overwrite=None):
     '''
     Run the grid of models.
     Args:
-        parallel (optional, bool): whether to parallelize the evolution
-        show_progress (optional, bool): whether to show a progress bar
-        testrun (optional, bool): whether to run a test run
-        create_grid (optional, bool): whether to create the grid
-        save_model (optional, bool): whether to save the model
-        logging (optional, bool): whether to log the evolution
-        overwrite (optional, bool): whether to overwrite the grid_archive
+        masses (list): list of initial masses
+        metallicities (list): list of metallicities
+        v_surf_init_list (list): list of initial surface velocities
+        models_list (optional, list): model numbers corresponding to the grid points. 
+                                    If None, model numbers will be automatically assigned.
+        cpu_per_process (optional, int): number of CPUs to use per process
+        gyre (optional, bool): whether to run GYRE on the models
+        save_model (optional, bool): whether to save the model after the run
+        logging (optional, bool): whether to log the run
+        overwrite (optional, bool): whether to overwrite existing "gridwork" and "gridwork" directory. 
+                                    If False, the existing "grid_archive" directory will be renamed to "grid_archive_old".
+                                    If False, the existing "gridwork" will be overwritten nonetheless.
     '''
 
     ## Create archive directories
-    if os.path.exists("grid_archive"):
-        if overwrite:
-            shutil.rmtree("grid_archive")
-        else:
-            if overwrite is None:
-                if prompt.Confirm.ask("Overwrite existing grid_archive?"):
-                    shutil.rmtree("grid_archive")
-            if os.path.exists("grid_archive"):
-                print("Moving old grid_archive(s) to grid_archive_old(:)")
-                old = 0
-                while os.path.exists(f"grid_archive_old{old}"):
-                    old += 1
-                    if old >= 3:
-                        break
-                while old > 0:
-                    shutil.move(f"grid_archive_old{old-1}", f"grid_archive_old{old}")
-                    old -= 1
-                shutil.move("grid_archive", f"grid_archive_old{old}")    
-    os.mkdir("grid_archive")
-    os.mkdir("grid_archive/models")
-    os.mkdir("grid_archive/histories")
-    os.mkdir("grid_archive/profiles")
-    os.mkdir("grid_archive/gyre")
-    os.mkdir("grid_archive/failed")
-    ## Create work directory
-    if os.path.exists("gridwork"):
-        shutil.rmtree("gridwork")
-    os.mkdir("gridwork")
+    helper.create_grid_dirs(overwrite=overwrite)
 
     ## Run grid ##
-    processors = int(ray.cluster_resources()["CPU"])
-    cpu_per_process = 24
-    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
-                                        "MKL_NUM_THREADS": str(cpu_per_process)})
-    ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
-                        "scheduling_strategy" : "DEFAULT", 
-                        "max_restarts" : -1, "max_task_retries" : -1}
-    n_processes = (processors // cpu_per_process)
     length = len(masses)
-    args = zip(masses, metallicities, v_surf_init_list,
-                    range(1, length+1), repeat(gyre), repeat(save_model), repeat(logging), 
-                    repeat(True), repeat(True))
-       
-    print(f"[b i][blue]Evolving total {length} stellar models with {n_processes} processes running in parallel.[/blue]")
-    with progress.Progress(*helper.progress_columns()) as progressbar:
-        task = progressbar.add_task("[b i green]Running...", total=length)
-        with Pool(processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
-            for i, res in enumerate(pool.imap_unordered(evo_star, args)):
-                progressbar.advance(task)
+    if models_list is None:
+        models_list = range(1, length+1)
+    args = zip(masses, metallicities, v_surf_init_list, models_list,
+                    repeat(gyre), repeat(save_model), repeat(logging), 
+                    repeat(True))
+    ray_pool(evo_star, args, length, cpu_per_process=cpu_per_process)
 
-        
+
 
 def init_grid(testrun=None, create_grid=True):
     '''
@@ -261,6 +204,85 @@ def init_grid(testrun=None, create_grid=True):
         v_surf_init_list = np.random.randint(1, 10, len(masses)).astype(float) * 30
     return masses, metallicities, v_surf_init_list
 
+
+def gyre_parallel(args):
+    '''Run GYRE on a tar.gz model'''
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+    model, dir_name, gyre_in, cpu_per_process = args
+    model = model.split("/")[-1]
+    models_archive = os.path.abspath(f"{dir_name}/models")
+    gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{model}")
+    try:
+        with helper.cwd(models_archive):
+            with tarfile.open(model, "r:gz") as tar:
+                tar.extractall()
+            name = model.split(".")[0].replace("model", "work")
+            work_dir = os.path.abspath(os.path.join(models_archive, name))
+            print(f"[b][blue]Running GYRE on[/blue] {name}")
+            # Run GYRE
+            proj = ProjectOps(name)
+            os.environ['OMP_NUM_THREADS'] = '8'
+            proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
+    except Exception as e:
+        print(f"[b][red]Error running GYRE on[/red] {name}")
+        logging.error(traceback.format_exc())
+        raise e
+    finally:
+        ## Archive GYRE output
+        os.mkdir(gyre_archive)
+        for file in glob.glob(os.path.join(work_dir, "LOGS/*-freqs.dat")):
+            shutil.copy(file, gyre_archive)
+        ## Remove work directory
+        for i in range(5):              ## Try 5 times, then give up. NFS is weird. Gotta wait and retry.
+            os.system(f"rm -rf {work_dir} > /dev/null 2>&1")
+            time.sleep(0.5)             ## Wait for the process, that has the nfs files open, to die/diconnect
+
+
+
+def run_gyre(dir_name, gyre_in, cpu_per_process=16):
+    '''
+    Run GYRE on all models in the archive. OR run GYRE on a single model.
+    Args:       
+        dir_name (str): archive directory name
+        parallel (optional, bool): whether to parallelize the evolution
+    '''
+    models_archive = os.path.abspath(f"{dir_name}/models/")
+    gyre_archive = os.path.abspath(f"{dir_name}/gyre/")
+    gyre_in = os.path.abspath(gyre_in)
+    models = glob.glob(os.path.join(models_archive, "*.tar.gz"))
+    args = zip(models, repeat(dir_name), repeat(gyre_in), repeat(cpu_per_process))
+    length = len(models)
+    try:
+        ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
+    except KeyboardInterrupt:
+
+        print("[b][red]GYRE interrupted. Cleaning up.")
+        [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
+        tmp = os.path.join(models_archive, "work*")
+        os.system(f"rm -rf {tmp} > /dev/null 2>&1") ## one of the folders might not be deleted... -_-
+        print("[b][red]GYRE stopped.")
+        raise KeyboardInterrupt
+    except Exception as e:
+        print("[b][red]GYRE run failed. Check run logs.")
+        raise e
+
+        
+
+def ray_pool(func, args, length, cpu_per_process=16):
+    processors = int(ray.cluster_resources()["CPU"])
+    runtime_env = RuntimeEnv(env_vars={"OMP_NUM_THREADS": str(cpu_per_process), 
+                                        "MKL_NUM_THREADS": str(cpu_per_process)})
+    ray_remote_args = {"num_cpus": cpu_per_process, "runtime_env": runtime_env, 
+                        "scheduling_strategy" : "DEFAULT", 
+                        "max_restarts" : -1, "max_task_retries" : -1}
+    n_processes = (processors // cpu_per_process)
+    print(f"[b][blue]Running {min([n_processes, length])} parallel processes on {processors} cores.[/blue]")
+    with progress.Progress(*helper.progress_columns()) as progressbar:
+        task = progressbar.add_task("[b i green]Running...", total=length)
+        with Pool(ray_address="auto", processes=n_processes, initializer=helper.mute, ray_remote_args=ray_remote_args) as pool:
+            for i, res in enumerate(pool.imap_unordered(func, args)):
+                progressbar.advance(task)
+
 def stop_ray():
     subprocess.call("ray stop --force".split(" "))
     subprocess.call("killall -9 pbs_tmrsh".split(" "))
@@ -268,7 +290,6 @@ def stop_ray():
 def start_ray():
     ## this shell script stops all ray processing before starting new cluster
     subprocess.call("./rayCluster/ray-cluster.sh".split(" "), stdout=subprocess.DEVNULL)
-
 
     
 
@@ -280,27 +301,27 @@ if __name__ == "__main__":
             ## Start the ray cluster
             with console.Console().status("[b i][blue]Starting ray cluster...[/blue]") as status:
                 start_ray()
+                # subprocess.call(["clear"])
             print("[b i][green]Ray cluster started.[/green]\n")
             ray.init(address="auto")
         print("\n[b i][blue]Ray cluster resources:[/blue]")
         print("CPUs: ", ray.cluster_resources()["CPU"])
         print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
+        print("Object Store Memory: ", ray.cluster_resources()["object_store_memory"]/1e9, "GB\n")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-        ## Run grid
-        run_grid(masses, metallicities, v_surf_init_list, overwrite=True)
+        # ## Run grid
+        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        # run_gyre(dir_name="grid_archive_old", gyre_in="templates/gyre_rot_template_dipole.in")
+        # run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=24)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
         print("[b i][red]Ray cluster stopped.[/red]\n")
     except Exception as e:
-        import traceback
-        import logging
         logging.error(traceback.format_exc())
         print("[b i][red]Encountered an error.[/red]\n")
         stop_ray()
