@@ -316,7 +316,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=16, overwrite=True)
 
         # ## Run gyre
-        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=128)
+        run_gyre(dir_name="grid_archive_test", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
