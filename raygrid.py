@@ -216,7 +216,7 @@ def gyre_parallel(args):
     model, dir_name, gyre_in, cpu_per_process = args
     model = model.split("/")[-1]
     models_archive = os.path.abspath(f"{dir_name}/models")
-    gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{model}")
+    gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{model.split('.')[0]}")
     try:
         with helper.cwd(models_archive):
             with tarfile.open(model, "r:gz") as tar:
@@ -242,6 +242,12 @@ def gyre_parallel(args):
         os.mkdir(gyre_archive)
         for file in glob.glob(os.path.join(work_dir, "LOGS/*-freqs.dat")):
             shutil.copy(file, gyre_archive)
+        ## Compress GYRE output
+        compressed_file = f"{gyre_archive}.tar.gz"
+        with tarfile.open(compressed_file, "w:gz") as tarhandle:
+            tarhandle.add(gyre_archive, arcname=os.path.basename(gyre_archive))
+        ## Remove GYRE output
+        shutil.rmtree(gyre_archive)
         ## Remove work directory
         for i in range(5):              ## Try 5 times, then give up. NFS is weird. Gotta wait and retry.
             os.system(f"rm -rf {work_dir} > /dev/null 2>&1")
@@ -323,10 +329,10 @@ if __name__ == "__main__":
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
         # ## Run grid
-        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=12, overwrite=True, gyre=True)
+        # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=24, overwrite=True)
 
-        # ## Run gyre
-        # run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=32)
+        ## Run gyre
+        run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=48)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
