@@ -271,9 +271,8 @@ def run_gyre(dir_name, gyre_in, cpu_per_process=16):
     try:
         ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
     except KeyboardInterrupt:
-
         print("[b][red]GYRE interrupted. Cleaning up.")
-        [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
+        os.system(f"rm -rf {gyre_archive}/* > /dev/null 2>&1")
         tmp = os.path.join(models_archive, "work*")
         os.system(f"rm -rf {tmp} > /dev/null 2>&1") ## one of the folders might not be deleted... -_-
         print("[b][red]GYRE stopped.")
