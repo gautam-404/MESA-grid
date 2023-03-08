@@ -1,11 +1,11 @@
 #!/bin/bash
  
-#PBS -l ncpus=4680
-#PBS -l mem=1TB
+#PBS -l ncpus=4704
+#PBS -l mem=200GB
 #PBS -l jobfs=500GB
 #PBS -q normal
 #PBS -P ht06
-#PBS -l walltime=01:00:00
+#PBS -l walltime=02:00:00
 #PBS -l storage=scratch/ht06
 #PBS -l wd
 #PBS -M anuj.gautam@usq.edu.au
