@@ -1,8 +1,8 @@
 #!/bin/bash
  
-#PBS -l ncpus=18720
-#PBS -l mem=2TB
-#PBS -l jobfs=300GB
+#PBS -l ncpus=4680
+#PBS -l mem=1TB
+#PBS -l jobfs=500GB
 #PBS -q normal
 #PBS -P ht06
 #PBS -l walltime=01:00:00
@@ -11,6 +11,13 @@
 #PBS -M anuj.gautam@usq.edu.au
 #PBS -m abe
 
-source ~/.bashrc
+export MESASDK_ROOT=/scratch/ht06/ag9272/workspace/software/mesasdk
+source $MESASDK_ROOT/bin/mesasdk_init.sh
+export MESA_DIR=/scratch/ht06/ag9272/workspace/software/mesa-r22.11.1
+export GYRE_DIR=$MESA_DIR/gyre/gyre
+export PATH=$PATH:~/.local/bin
 
-python raygrid.py
+module restore MESA
+
+
+python3 raygrid.py
