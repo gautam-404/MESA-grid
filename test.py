@@ -8,10 +8,9 @@ import helper
 
 
 
-def evo_star(mass, metallicity, v_surf_init, logging, parallel):
+def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, convergence_help):
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
-    name = f"test"
     proj = ProjectOps(name)     
     proj.create(overwrite=True) 
     star = MesaAccess(name)
@@ -30,7 +29,7 @@ def evo_star(mass, metallicity, v_surf_init, logging, parallel):
                             'num_steps_to_relax_rotation' : 100, ## Default value is 100
                             'set_uniform_am_nu_non_rot': True}
     
-    ## To help with convergence (only use for early preMS)
+    ## To help with convergence_help (only use for early preMS)
 
     ## ISSUE: 
     #   max_residual > tol_max_residual           2    4.1542802224140270D-05    1.0000000000000001D-05
@@ -72,6 +71,8 @@ def evo_star(mass, metallicity, v_surf_init, logging, parallel):
                 if phase_name == "Pre-MS Evolution":
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
+                    if convergence_help:
+                        star.set(convergence_helper, force=True)
                     if retry>=0:
                         star.set(convergence_helper, force=True)
                     proj.run(logging=logging, parallel=parallel)
@@ -98,5 +99,6 @@ def evo_star(mass, metallicity, v_surf_init, logging, parallel):
                 f.write(f"New initial mass: {initial_mass}\n")
 
 if __name__ == "__main__":
-    os.environ["OMP_NUM_THREADS"] = "128"
-    evo_star(mass=1.34, metallicity=0.004, v_surf_init=0, logging=True, parallel=False)
+    os.environ["OMP_NUM_THREADS"] = "64"
+    evo_star(name="test1", mass=1.32, metallicity=0.001, v_surf_init=2, logging=True, parallel=False, convergence_help=True)
+    evo_star(name="test2", mass=1.32, metallicity=0.001, v_surf_init=2, logging=True, parallel=False, convergence_help=False)
