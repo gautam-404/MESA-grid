@@ -26,17 +26,17 @@ def evo_star(args):
             args[0] (float): initial mass
             args[1] (float): metallicity
             args[2] (float): initial surface rotation velocity
-            args[3] (str): model number
+            args[3] (str): track number
             args[4] (bool): whether to run GYRE
-            args[5] (bool): whether to save the model
+            args[5] (bool): whether to save the track
             args[6] (bool): whether to log the evolution in a run.log file
             args[7] (bool): whether this function is being run in parallel with ray
     '''
-    mass, metallicity, v_surf_init, model, gyre, save_model, logging, parallel, cpu_this_process = args
+    mass, metallicity, v_surf_init, track, gyre, save_track, logging, parallel, cpu_this_process = args
 
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
-    name = f"gridwork/work_{model}"
+    name = f"gridwork/work_{track}"
     proj = ProjectOps(name)     
     proj.create(overwrite=True) 
     star = MesaAccess(name)
@@ -55,7 +55,7 @@ def evo_star(args):
                             'num_steps_to_relax_rotation' : 100, ## Default value is 100
                             'set_uniform_am_nu_non_rot': True}
 
-    ## Failed Models, CONVERGENCE ISSUE: 
+    ## Failed tracks, CONVERGENCE ISSUE: 
     #   max_residual > tol_max_residual           2    4.1542802224140270D-05    1.0000000000000001D-05
     #   max_residual > tol_max_residual           2    3.3535355297261565D-05    1.0000000000000001D-05
     # Then later: terminated evolution: hydro_failed
@@ -84,7 +84,7 @@ def evo_star(args):
                 if phase_name == "Pre-MS Evolution":
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
-                    if retry>=0:
+                    if retry >= 0:
                         star.set(convergence_helper, force=True)
                     proj.run(logging=logging, parallel=parallel)
                 else:
@@ -102,7 +102,7 @@ def evo_star(args):
             initial_mass = mass + dM[retry]
             with open(f"{name}/run.log", "a+") as f:
                 if retry == len(dM)-1:
-                    f.write(f"Max retries reached. Model skipped!\n")
+                    f.write(f"Max retries reached. Track skipped!\n")
                     break
                 f.write(f"\nMass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
                 f.write(f"Failed at phase: {phase_name}\n")
@@ -117,29 +117,29 @@ def evo_star(args):
                         logging=False, parallel=True, n_cores=cpu_this_process)
         
         ## Archive LOGS
-        helper.archive_LOGS(name, model, save_model, gyre)
+        helper.archive_LOGS(name, track, save_track, gyre)
     else:
         if logging:         ## If the run failed, archive the log file
-            shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{model}.log")
+            shutil.copy(f"{name}/run.log", f"grid_archive/failed/failed_{track}.log")
         shutil.rmtree(name)
 
 
 
 
 
-def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_process=16, gyre=False, 
-            save_model=True, logging=True, overwrite=None):
+def run_grid(masses, metallicities, v_surf_init_list, tracks_list=None, cpu_per_process=16, gyre=False, 
+            save_track=True, logging=True, overwrite=None):
     '''
-    Run the grid of models.
+    Run the grid of tracks.
     Args:
         masses (list): list of initial masses
         metallicities (list): list of metallicities
         v_surf_init_list (list): list of initial surface velocities
-        models_list (optional, list): model numbers corresponding to the grid points. 
-                                    If None, model numbers will be automatically assigned.
+        tracks_list (optional, list): track numbers corresponding to the grid points. 
+                                    If None, track numbers will be automatically assigned.
         cpu_per_process (optional, int): number of CPUs to use per process
-        gyre (optional, bool): whether to run GYRE on the models
-        save_model (optional, bool): whether to save the model after the run
+        gyre (optional, bool): whether to run GYRE on the tracks
+        save_track (optional, bool): whether to save the track after the run
         logging (optional, bool): whether to log the run
         overwrite (optional, bool): whether to overwrite existing "gridwork" and "gridwork" directory. 
                                     If False, the existing "grid_archive" directory will be renamed to "grid_archive_old".
@@ -151,10 +151,10 @@ def run_grid(masses, metallicities, v_surf_init_list, models_list=None, cpu_per_
 
     ## Run grid ##
     length = len(masses)
-    if models_list is None:
-        models_list = range(1, length+1)
-    args = zip(masses, metallicities, v_surf_init_list, models_list,
-                    repeat(gyre), repeat(save_model), repeat(logging), 
+    if tracks_list is None:
+        tracks_list = range(1, length+1)
+    args = zip(masses, metallicities, v_surf_init_list, tracks_list,
+                    repeat(gyre), repeat(save_track), repeat(logging), 
                     repeat(True), repeat(cpu_per_process))
     ray_pool(evo_star, args, length, cpu_per_process=cpu_per_process)
 
@@ -179,8 +179,9 @@ def init_grid(testrun=None, create_grid=True):
         masses = np.repeat(sample_masses, len(sample_metallicities)*len(sample_v_init)).astype(float) 
         metallicities = np.tile(np.repeat(sample_metallicities, len(sample_v_init)), len(sample_masses)).astype(float)
         v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float) 
-        ### Uncomment to print grid
-        # print(list(map(tuple, np.dstack(np.array([masses, metallicities, v_surf_init_list]))[0]))) 
+        # ## Uncomment to print grid
+        # print(list(map(tuple, np.dstack(np.array([masses, metallicities, v_surf_init_list]))[0])))
+        # print(len(masses), len(metallicities), len(v_surf_init_list))
         # exit()    
         return masses, metallicities, v_surf_init_list
 
@@ -190,9 +191,9 @@ def init_grid(testrun=None, create_grid=True):
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
         if testrun == "grid":
-            sample_masses = np.arange(1.30, 1.56, 0.02)                  ## 1.30 - 1.54 Msun (0.02 Msun step)
+            sample_masses = np.arange(1.20, 1.56, 0.02)                  ## 1.20 - 1.54 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.001, 0.013, 0.001)     ## 0.001 - 0.012 (0.001 step)
-            sample_v_init = np.arange(0, 20, 2)                          ## 0 - 18 km/s (2 km/s step)
+            sample_v_init = np.arange(0, 22, 2)                          ## 0 - 20 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
     elif create_grid:
         ## Create grid
@@ -211,18 +212,18 @@ def init_grid(testrun=None, create_grid=True):
 
 
 def gyre_parallel(args):
-    '''Run GYRE on a tar.gz model'''
+    '''Run GYRE on a tar.gz track'''
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
-    model, dir_name, gyre_in, cpu_per_process = args
-    model = model.split("/")[-1]
-    models_archive = os.path.abspath(f"{dir_name}/models")
-    gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{model.split('.')[0]}")
+    track, dir_name, gyre_in, cpu_per_process = args
+    track = track.split("/")[-1]
+    tracks_archive = os.path.abspath(f"{dir_name}/tracks")
+    gyre_archive = os.path.abspath(f"{dir_name}/gyre/freqs_{track.split('.')[0]}")
     try:
-        with helper.cwd(models_archive):
-            with tarfile.open(model, "r:gz") as tar:
+        with helper.cwd(tracks_archive):
+            with tarfile.open(track, "r:gz") as tar:
                 tar.extractall()
-            name = model.split(".")[0].replace("model", "work")
-            work_dir = os.path.abspath(os.path.join(models_archive, name))
+            name = track.split(".")[0].replace("track", "work")
+            work_dir = os.path.abspath(os.path.join(tracks_archive, name))
             print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
@@ -257,24 +258,23 @@ def gyre_parallel(args):
 
 def run_gyre(dir_name, gyre_in, cpu_per_process=16):
     '''
-    Run GYRE on all models in the archive. OR run GYRE on a single model.
+    Run GYRE on all tracks in the archive. OR run GYRE on a single track.
     Args:       
         dir_name (str): archive directory name
         parallel (optional, bool): whether to parallelize the evolution
     '''
-    models_archive = os.path.abspath(f"{dir_name}/models/")
+    tracks_archive = os.path.abspath(f"{dir_name}/tracks/")
     gyre_archive = os.path.abspath(f"{dir_name}/gyre/")
     gyre_in = os.path.abspath(gyre_in)
-    models = glob.glob(os.path.join(models_archive, "*.tar.gz"))
-    args = zip(models, repeat(dir_name), repeat(gyre_in), repeat(cpu_per_process))
-    length = len(models)
+    tracks = glob.glob(os.path.join(tracks_archive, "*.tar.gz"))
+    args = zip(tracks, repeat(dir_name), repeat(gyre_in), repeat(cpu_per_process))
+    length = len(tracks)
     try:
         ray_pool(gyre_parallel, args, length, cpu_per_process=cpu_per_process)
     except KeyboardInterrupt:
-
         print("[b][red]GYRE interrupted. Cleaning up.")
-        [shutil.rmtree(f, ignore_errors=True) for f in glob.glob(os.path.join(gyre_archive, "*"))]
-        tmp = os.path.join(models_archive, "work*")
+        os.system(f"rm -rf {gyre_archive}/* > /dev/null 2>&1")
+        tmp = os.path.join(tracks_archive, "work*")
         os.system(f"rm -rf {tmp} > /dev/null 2>&1") ## one of the folders might not be deleted... -_-
         print("[b][red]GYRE stopped.")
         raise KeyboardInterrupt
@@ -328,11 +328,11 @@ if __name__ == "__main__":
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-        # ## Run grid
-        # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=24, overwrite=True)
+        ## Run grid
+        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=2, overwrite=True)
 
-        ## Run gyre
-        run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=48)
+        # ## Run gyre
+        # run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=48)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
