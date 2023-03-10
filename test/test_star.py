@@ -11,7 +11,7 @@ import helper
 
 
 
-def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, convergence_help):
+def evo_star(name, mass, metallicity, v_surf_init, logging, parallel):
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     proj = ProjectOps(name)     
@@ -55,8 +55,6 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, convergenc
                 if phase_name == "Pre-MS Evolution":
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
-                    if convergence_help:
-                        star.set(convergence_helper, force=True)
                     if retry>=0:
                         star.set(convergence_helper, force=True)
                     proj.run(logging=logging, parallel=parallel)
@@ -95,6 +93,6 @@ if __name__ == "__main__":
         task = progressbar.add_task("[b i green]Running...", total=length)
         with Pool(n_procs, initializer=helper.mute) as pool:
             args = zip([f"tests_here/track{i}" for i in range(1, length+1)], repeat(M), repeat(Z), V,
-                         repeat(True), repeat(True), repeat(True))
+                         repeat(True), repeat(True))
             for _ in pool.istarmap(evo_star, args):
                 progressbar.advance(task)
