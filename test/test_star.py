@@ -2,16 +2,17 @@ from MESAcontroller import ProjectOps, MesaAccess
 
 import numpy as np
 from rich import print, progress
-import os
+import os, shutil
 from itertools import repeat
 from multiprocessing import Pool
+import glob
 
 
 import helper
 
 
 
-def evo_star(name, mass, metallicity, v_surf_init, logging, parallel):
+def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_process):
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
     proj = ProjectOps(name)     
@@ -79,7 +80,15 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel):
                 f.write(f"Failed at phase: {phase_name}\n")
                 f.write(f"Retrying with dM = {dM[retry]}\n")
                 f.write(f"New initial mass: {initial_mass}\n")
-
+    highest_density_profile = sorted(glob.glob(f"{name}/LOGS/profile*.data.FGONG"), 
+                                key=lambda x: int(os.path.basename(x).split('.')[0].split('profile')[1]))[-1]
+    highest_density_profile = highest_density_profile.split('/')[-1]
+    proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files=highest_density_profile, data_format="FGONG", 
+                        logging=True, parallel=False)
+    os.mkdir(f"tests_here/test_star/V_{v_surf_init}")
+    shutil.copy(f"{name}/LOGS/{highest_density_profile}", f"tests_here/test_star/V_{v_surf_init}/")
+    shutil.copy(f"{name}/LOGS/{highest_density_profile.split('.')[0]}-freqs.dat", f"tests_here/test_star/V_{v_surf_init}/")
+    shutil.rmtree(name)
 
 if __name__ == "__main__":
     V = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
@@ -88,11 +97,12 @@ if __name__ == "__main__":
     length = len(V)
     n_cores = os.cpu_count()
     n_procs = length
-    os.environ["OMP_NUM_THREADS"] = str(n_cores//n_procs)
+    cpu_per_process = n_cores//n_procs
+    os.environ["OMP_NUM_THREADS"] = str(cpu_per_process)
     with progress.Progress(*helper.progress_columns()) as progressbar:
         task = progressbar.add_task("[b i green]Running...", total=length)
         with Pool(n_procs, initializer=helper.mute) as pool:
             args = zip([f"tests_here/track{i}" for i in range(1, length+1)], repeat(M), repeat(Z), V,
-                         repeat(True), repeat(True))
+                         repeat(True), repeat(True), repeat(cpu_per_process))
             for _ in pool.istarmap(evo_star, args):
                 progressbar.advance(task)

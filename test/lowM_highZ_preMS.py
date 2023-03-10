@@ -52,6 +52,7 @@ def evo_star(name, mass, metallicity, v_surf_init, rotation, logging, parallel, 
             if convergence_help:
                 star.set(convergence_helper, force=True)
             proj.run(logging=logging, parallel=parallel)
+            break ##### Only run preMS #####
         else:
             proj.resume(logging=logging, parallel=parallel)
 
@@ -60,5 +61,5 @@ if __name__ == "__main__":
     M = 1.5
     Z = 0.022
     os.environ["OMP_NUM_THREADS"] = "16"
-    name = f"test_here/preMS_M{M}_Z{Z}_V{V}"
+    name = f"tests_here/preMS_M{M}_Z{Z}_V{V}"
     evo_star(name, M, Z, V, rotation=False, logging=True, parallel=False, convergence_help=False)
