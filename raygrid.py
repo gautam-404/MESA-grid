@@ -322,8 +322,8 @@ if __name__ == "__main__":
             ray.init(address="auto")
         print("\n[b i][blue]Ray cluster resources:[/blue]")
         print("CPUs: ", ray.cluster_resources()["CPU"])
-        print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
-        print("Object Store Memory: ", ray.cluster_resources()["object_store_memory"]/1e9, "GB\n")
+        # print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
+        # print("Object Store Memory: ", ray.cluster_resources()["object_store_memory"]/1e9, "GB\n")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
