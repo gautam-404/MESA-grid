@@ -74,7 +74,7 @@
 	terminal_interval = 10
 	write_profiles_flag = .true. 
 	write_pulse_data_with_profile = .true.
-	pulse_data_format = 'FGONG'
+	pulse_data_format = 'GYRE'
 	add_atmosphere_to_pulse_data = .true.
 	profile_data_prefix = 'profile'
 	profiles_index_name = 'profiles.index'
