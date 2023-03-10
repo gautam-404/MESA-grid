@@ -54,8 +54,8 @@ def phases_params(initial_mass, Zinit):
                     {'initial_mass': initial_mass, 'initial_z': Zinit, 'Zbase': Zinit, 'initial_y': Yinit,
                     'initial_h1': initial_h1,'initial_h2': initial_h2, 
                     'initial_he3': initial_he3, 'initial_he4': initial_he4,
-                    'create_pre_main_sequence_model': True, 'pre_ms_T_c': 9e5,
-                    'set_initial_model_number' : True, 'initial_model_number' : 0,
+                    'create_pre_main_sequence_track': True, 'pre_ms_T_c': 9e5,
+                    'set_initial_track_number' : True, 'initial_track_number' : 0,
                     'set_uniform_initial_composition' : True, 'initial_zfracs' : 6,
                     'change_net' : True, 'new_net_name' : 'pp_and_cno_extras.net',  
                     'change_initial_net' : False, 'adjust_abundances_for_new_isos' : True,
@@ -150,9 +150,9 @@ def scrap_age(n):
                 age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
             else:
                 age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
-            text += f"[b][i]Model[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
+            text += f"[b][i]track[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
-            text += f"[b][i]Model[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
+            text += f"[b][i]track[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
     return text
 
 def progress_columns():
@@ -167,7 +167,7 @@ def progress_columns():
 
 def live_display(n):
     '''Define live display
-    Args:   n (int): number of models
+    Args:   n (int): number of tracks
     Returns:    live_disp (rich.live.Live): live display
                 progressbar (rich.progress.Progress): progress bar
                 group (rich.console.Group): group of panels
@@ -212,7 +212,7 @@ def create_grid_dirs(overwrite=None):
                     old -= 1
                 shutil.move("grid_archive", f"grid_archive_old{old}")    
     os.mkdir("grid_archive")
-    os.mkdir("grid_archive/models")
+    os.mkdir("grid_archive/tracks")
     os.mkdir("grid_archive/histories")
     os.mkdir("grid_archive/profiles")
     os.mkdir("grid_archive/gyre")
@@ -223,18 +223,18 @@ def create_grid_dirs(overwrite=None):
     os.mkdir("gridwork")
 
 
-def archive_LOGS(name, model, save_model, gyre):
+def archive_LOGS(name, track, save_track, gyre):
     path = os.path.abspath(os.path.join(os.getcwd().split("MESA-grid")[0], "MESA-grid"))
     os.chdir(path)
-    shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
-    shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
+    shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{track}.data")
+    shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{track}.index")
     if gyre:
-        gyre_archive = os.path.abspath(f"grid_archive/gyre/freqs_{model}")
+        gyre_archive = os.path.abspath(f"grid_archive/gyre/freqs_{track}")
         os.mkdir(gyre_archive)
         for file in glob.glob(os.path.join(name, "LOGS/*-freqs.dat")):
             shutil.copy(file, gyre_archive)
-    if save_model:
-        compressed_file = f"grid_archive/models/model_{model}.tar.gz"
+    if save_track:
+        compressed_file = f"grid_archive/tracks/track_{track}.tar.gz"
         with tarfile.open(compressed_file, "w:gz") as tarhandle:
             tarhandle.add(name, arcname=os.path.basename(name))
     shutil.rmtree(name)
@@ -248,32 +248,32 @@ def archive_LOGS(name, model, save_model, gyre):
 
 
 
-### temp function: used only when you want to run failed models, move to raygrid.py to use ###
+### temp function: used only when you want to run failed tracks, move to raygrid.py to use ###
 # def rerun_failed(grid_archive, masses, metallicities, v_surf_init_list, cpu_per_process=16,
-#                 gyre=False, save_model=True, logging=True, overwrite=None):
+#                 gyre=False, save_track=True, logging=True, overwrite=None):
 #     '''
-#     Retry failed models
+#     Retry failed tracks
 #     Args:
 #         grid_archive (str): grid archive directory
-#         gyre (optional, bool): whether to run GYRE on the models
-#         save_model (optional, bool): whether to save the model
+#         gyre (optional, bool): whether to run GYRE on the tracks
+#         save_track (optional, bool): whether to save the track
 #         logging (optional, bool): whether to log the evolution
 #         overwrite (optional, bool): whether to overwrite the grid_archive
 #     '''
-#     failed_models = glob.glob(f"{grid_archive}/failed/*")
-#     print(f"[b i][blue]Running {len(failed_models)} previously failed models.[/blue]")
+#     failed_tracks = glob.glob(f"{grid_archive}/failed/*")
+#     print(f"[b i][blue]Running {len(failed_tracks)} previously failed tracks.[/blue]")
 #     failed_masses = []
 #     failed_metallicities = []
 #     failed_v_surf_init_list = []
-#     models_list = []
-#     for model in failed_models:
-#         i = int(model.split("/")[-1].split(".")[0].split("_")[-1])
+#     tracks_list = []
+#     for track in failed_tracks:
+#         i = int(track.split("/")[-1].split(".")[0].split("_")[-1])
 #         failed_masses.append(masses[i-1])
 #         failed_metallicities.append(metallicities[i-1])
 #         failed_v_surf_init_list.append(v_surf_init_list[i-1])
-#         models_list.append(i)
+#         tracks_list.append(i)
         
 #     run_grid(failed_masses, failed_metallicities, failed_v_surf_init_list, 
-#             models_list=models_list, cpu_per_process=cpu_per_process, gyre=gyre, 
-#             save_model=save_model, logging=logging, overwrite=overwrite)
+#             tracks_list=tracks_list, cpu_per_process=cpu_per_process, gyre=gyre, 
+#             save_track=save_track, logging=logging, overwrite=overwrite)
         
