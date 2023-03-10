@@ -93,6 +93,9 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_p
     shutil.rmtree(name)
 
 if __name__ == "__main__":
+    if os.path.exists("tests_here/test_profiles"):
+        shutil.rmtree("tests_here/test_profiles")
+    os.mkdir("tests_here/test_profiles")
     V = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
     M = 1.32
     Z = 0.002
