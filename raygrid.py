@@ -84,7 +84,7 @@ def evo_star(args):
                 if phase_name == "Pre-MS Evolution":
                     ## Initiate rotation
                     star.set(rotation_init_params, force=True)
-                    if retry>=0:
+                    if retry >= 0:
                         star.set(convergence_helper, force=True)
                     proj.run(logging=logging, parallel=parallel)
                 else:
@@ -179,8 +179,9 @@ def init_grid(testrun=None, create_grid=True):
         masses = np.repeat(sample_masses, len(sample_metallicities)*len(sample_v_init)).astype(float) 
         metallicities = np.tile(np.repeat(sample_metallicities, len(sample_v_init)), len(sample_masses)).astype(float)
         v_surf_init_list = np.tile(sample_v_init, len(sample_masses)*len(sample_metallicities)).astype(float) 
-        ### Uncomment to print grid
-        # print(list(map(tuple, np.dstack(np.array([masses, metallicities, v_surf_init_list]))[0]))) 
+        # ## Uncomment to print grid
+        # print(list(map(tuple, np.dstack(np.array([masses, metallicities, v_surf_init_list]))[0])))
+        # print(len(masses), len(metallicities), len(v_surf_init_list))
         # exit()    
         return masses, metallicities, v_surf_init_list
 
@@ -190,9 +191,9 @@ def init_grid(testrun=None, create_grid=True):
             masses = [1.7]*len(v_surf_init_list)
             metallicities = [0.017]*len(v_surf_init_list)
         if testrun == "grid":
-            sample_masses = np.arange(1.30, 1.56, 0.02)                  ## 1.30 - 1.54 Msun (0.02 Msun step)
+            sample_masses = np.arange(1.20, 1.56, 0.02)                  ## 1.20 - 1.54 Msun (0.02 Msun step)
             sample_metallicities = np.arange(0.001, 0.013, 0.001)     ## 0.001 - 0.012 (0.001 step)
-            sample_v_init = np.arange(0, 20, 2)                          ## 0 - 18 km/s (2 km/s step)
+            sample_v_init = np.arange(0, 22, 2)                          ## 0 - 20 km/s (2 km/s step)
             masses, metallicities, v_surf_init_list = get_grid(sample_masses, sample_metallicities, sample_v_init)
     elif create_grid:
         ## Create grid
@@ -327,11 +328,11 @@ if __name__ == "__main__":
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-        # ## Run grid
-        # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=24, overwrite=True)
+        ## Run grid
+        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=2, overwrite=True)
 
-        ## Run gyre
-        run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=48)
+        # ## Run gyre
+        # run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=48)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
