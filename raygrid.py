@@ -111,7 +111,7 @@ def evo_star(args):
 
     if not failed:
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
-            os.environ['OMP_NUM_THREADS'] = '6'
+            os.environ['OMP_NUM_THREADS'] = '1'
             ## Run GYRE on multiple profile files parallely
             proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files='all', data_format="GYRE", 
                         logging=False, parallel=True, n_cores=cpu_this_process)
@@ -332,7 +332,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=1, overwrite=True)
 
         ## Run gyre
-        run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=1)
+        run_gyre(dir_name="grid_archive", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=1)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
