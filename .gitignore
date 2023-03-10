@@ -6,6 +6,7 @@ test/*
 software/*
 ray.log
 install.log
+archive/*
 
 
 **/.DS_Store

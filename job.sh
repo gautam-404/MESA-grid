@@ -1,7 +1,7 @@
 #!/bin/bash
  
 #PBS -l ncpus=4704
-#PBS -l mem=200GB
+#PBS -l mem=500GB
 #PBS -l jobfs=500GB
 #PBS -q normal
 #PBS -P ht06
