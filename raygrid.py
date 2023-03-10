@@ -227,13 +227,13 @@ def gyre_parallel(args):
             print(f"[b][blue]Running GYRE on[/blue] {name}")
             # Run GYRE
             proj = ProjectOps(name)
-            os.environ['OMP_NUM_THREADS'] = '8'
+            os.environ['OMP_NUM_THREADS'] = '1'
 
-            ## Run GYRE on multiple profile files parallely
-            proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=True, n_cores=cpu_per_process)
+            # ## Run GYRE on multiple profile files parallely
+            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=True, n_cores=cpu_per_process)
             
-            # ## Run GYRE on each profile file sequentially
-            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=True, parallel=False, n_cores=cpu_per_process)
+            ## Run GYRE on each profile file sequentially
+            proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=False, n_cores=cpu_per_process)
     except Exception as e:
         print(f"[b][red]Error running GYRE on[/red] {name}")
         logging.error(traceback.format_exc())
@@ -328,11 +328,11 @@ if __name__ == "__main__":
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
 
-        ## Run grid
-        run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=2, overwrite=True)
+        # ## Run grid
+        # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=1, overwrite=True)
 
-        # ## Run gyre
-        # run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=48)
+        ## Run gyre
+        run_gyre(dir_name="grid_archive_run1", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=1)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
