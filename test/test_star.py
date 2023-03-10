@@ -80,13 +80,14 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_p
                 f.write(f"Failed at phase: {phase_name}\n")
                 f.write(f"Retrying with dM = {dM[retry]}\n")
                 f.write(f"New initial mass: {initial_mass}\n")
-    highest_density_profile = sorted(glob.glob(f"{name}/LOGS/profile*.data.FGONG"), 
+    highest_density_profile = sorted(glob.glob(f"{name}/LOGS/profile*.data.GYRE"), 
                                 key=lambda x: int(os.path.basename(x).split('.')[0].split('profile')[1]))[-1]
     highest_density_profile = highest_density_profile.split('/')[-1]
-    proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files=highest_density_profile, data_format="FGONG", 
+    proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files=highest_density_profile, data_format="GYRE", 
                         logging=True, parallel=False)
     os.mkdir(f"tests_here/test_star/V_{v_surf_init}")
     shutil.copy(f"{name}/LOGS/{highest_density_profile}", f"tests_here/test_star/V_{v_surf_init}/")
+    shutil.copy(f"{name}/LOGS/history.data", f"tests_here/test_star/V_{v_surf_init}/")
     shutil.copy(f"{name}/LOGS/{highest_density_profile.split('.')[0]}-freqs.dat", f"tests_here/test_star/V_{v_surf_init}/")
     shutil.rmtree(name)
 

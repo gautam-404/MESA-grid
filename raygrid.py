@@ -113,7 +113,7 @@ def evo_star(args):
         if gyre:   ## Optional, GYRE can berun separately using the run_gyre function    
             os.environ['OMP_NUM_THREADS'] = '6'
             ## Run GYRE on multiple profile files parallely
-            proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files='all', data_format="FGONG", 
+            proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files='all', data_format="GYRE", 
                         logging=False, parallel=True, n_cores=cpu_this_process)
         
         ## Archive LOGS
@@ -230,10 +230,10 @@ def gyre_parallel(args):
             os.environ['OMP_NUM_THREADS'] = '8'
 
             ## Run GYRE on multiple profile files parallely
-            proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=False, parallel=True, n_cores=cpu_per_process)
+            proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=True, n_cores=cpu_per_process)
             
             # ## Run GYRE on each profile file sequentially
-            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="FGONG", logging=True, parallel=False, n_cores=cpu_per_process)
+            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=True, parallel=False, n_cores=cpu_per_process)
     except Exception as e:
         print(f"[b][red]Error running GYRE on[/red] {name}")
         logging.error(traceback.format_exc())
