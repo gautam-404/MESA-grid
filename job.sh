@@ -1,8 +1,8 @@
 #!/bin/bash
  
 #PBS -l ncpus=2544
-#PBS -l mem=2500GB
-#PBS -l jobfs=1TB
+#PBS -l mem=2TB
+#PBS -l jobfs=2TB
 #PBS -q normal
 #PBS -P ht06
 #PBS -l walltime=02:00:00

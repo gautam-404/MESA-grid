@@ -252,7 +252,7 @@ def gyre_parallel(args):
         print(f"[b][red]Error running GYRE on[/red] {name}")
         logging.error(traceback.format_exc())
         raise e
-        
+
 
 
 def run_gyre(dir_name, gyre_in, cpu_per_process=16):
@@ -321,8 +321,8 @@ if __name__ == "__main__":
             ray.init(address="auto")
         print("\n[b i][blue]Ray cluster resources:[/blue]")
         print("CPUs: ", ray.cluster_resources()["CPU"])
-        print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
-        print("Object Store Memory: ", ray.cluster_resources()["object_store_memory"]/1e9, "GB\n")
+        # print("Memory: ", ray.cluster_resources()["memory"]/1e9, "GB")
+        # print("Object Store Memory: ", ray.cluster_resources()["object_store_memory"]/1e9, "GB\n")
 
         ## Initialize grid
         masses, metallicities, v_surf_init_list = init_grid(testrun="grid")
