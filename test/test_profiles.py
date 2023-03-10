@@ -83,18 +83,19 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_p
     highest_density_profile = sorted(glob.glob(f"{name}/LOGS/profile*.data.GYRE"), 
                                 key=lambda x: int(os.path.basename(x).split('.')[0].split('profile')[1]))[-1]
     highest_density_profile = highest_density_profile.split('/')[-1]
-    proj.runGyre(gyre_in="templates/gyre_rot_template_dipole.in", files=highest_density_profile, data_format="GYRE", 
+    proj.runGyre(gyre_in="../templates/gyre_rot_template_dipole.in", files=highest_density_profile, data_format="GYRE", 
                         logging=True, parallel=False)
-    os.mkdir(f"tests_here/test_star/V_{v_surf_init}")
-    shutil.copy(f"{name}/LOGS/{highest_density_profile}", f"tests_here/test_star/V_{v_surf_init}/")
-    shutil.copy(f"{name}/LOGS/history.data", f"tests_here/test_star/V_{v_surf_init}/")
-    shutil.copy(f"{name}/LOGS/{highest_density_profile.split('.')[0]}-freqs.dat", f"tests_here/test_star/V_{v_surf_init}/")
+    os.mkdir(f"tests_here/test_profiles/V_{v_surf_init}")
+    shutil.copy(f"{name}/LOGS/{highest_density_profile}", f"tests_here/test_profiles/V_{v_surf_init}/")
+    shutil.copy(f"{name}/LOGS/history.data", f"tests_here/test_profiles/V_{v_surf_init}/")
+    shutil.copy(f"{name}/LOGS/profiles.index", f"tests_here/test_profiles/V_{v_surf_init}/")
+    shutil.copy(f"{name}/LOGS/{highest_density_profile.split('.')[0]}-freqs.dat", f"tests_here/test_profiles/V_{v_surf_init}/")
     shutil.rmtree(name)
 
 if __name__ == "__main__":
     V = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
     M = 1.32
-    Z = 0.02
+    Z = 0.002
     length = len(V)
     n_cores = os.cpu_count()
     n_procs = length
