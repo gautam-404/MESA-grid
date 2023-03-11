@@ -232,21 +232,23 @@ def gyre_parallel(args):
             proj = ProjectOps(name)
             os.environ['OMP_NUM_THREADS'] = '1'
 
-            # ## Run GYRE on multiple profile files parallely
-            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=True, n_cores=cpu_per_process)
+            ## Run GYRE on multiple profile files parallely
+            proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=True, n_cores=cpu_per_process)
             
-            ## Run GYRE on each profile file sequentially
-            proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=False, n_cores=cpu_per_process)
+            # ## Run GYRE on each profile file sequentially
+            # proj.runGyre(gyre_in=gyre_in, files='all', data_format="GYRE", logging=False, parallel=False, n_cores=cpu_per_process)
+            
             os.mkdir(freq_folder)
+            ## Copy GYRE frequency output
             for file in glob.glob(os.path.join(work_dir, "LOGS/*-freqs.dat")):
                 shutil.copy(file, freq_folder)
             ## Compress GYRE output
             compressed_file = f"{freq_folder}.tar.gz"
             with tarfile.open(compressed_file, "w:gz") as tarhandle:
                 tarhandle.add(freq_folder, arcname=os.path.basename(freq_folder))
-            ## Remove GYRE output
-            shutil.rmtree(freq_folder)
+            ## Move and clear GYRE output
             shutil.move(compressed_file, gyre_archive)
+            shutil.rmtree(freq_folder)
             os.system(f"rm -rf {work_dir} > /dev/null 2>&1")
     except Exception as e:
         print(f"[b][red]Error running GYRE on[/red] {name}")
@@ -331,7 +333,7 @@ if __name__ == "__main__":
         # run_grid(masses, metallicities, v_surf_init_list, cpu_per_process=1, overwrite=True)
 
         ## Run gyre
-        run_gyre(dir_name="grid_archive", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=1)
+        run_gyre(dir_name="grid_archive", gyre_in="templates/gyre_rot_template_dipole.in", cpu_per_process=12)
     except KeyboardInterrupt:
         print("[b i][red]Grid run aborted.[/red]\n")
         stop_ray()
