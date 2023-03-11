@@ -14,8 +14,8 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, convergenc
     proj = ProjectOps(name)     
     proj.create(overwrite=True) 
     star = MesaAccess(name)
-    star.load_HistoryColumns("./templates/history_columns.list")
-    star.load_ProfileColumns("./templates/profile_columns.list")
+    star.load_HistoryColumns("../templates/history_columns.list")
+    star.load_ProfileColumns("../templates/profile_columns.list")
 
     initial_mass = mass
     Zinit = metallicity
@@ -48,7 +48,7 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, convergenc
 
     convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead
 
-    inlist_template = "./templates/inlist_template"
+    inlist_template = "../templates/inlist_template"
     failed = True   ## Flag to check if the run failed, if it did, we retry with a different initial mass (M+dM)
     retry = 0
     dM = [0, 1e-3, -1e-3, 2e-3, -2e-3]
@@ -97,8 +97,11 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, convergenc
                 f.write(f"Failed at phase: {phase_name}\n")
                 f.write(f"Retrying with dM = {dM[retry]}\n")
                 f.write(f"New initial mass: {initial_mass}\n")
+    os.environ["OMP_NUM_THREADS"] = "8"
+    proj.runGyre(gyre_in="../templates/gyre_rot_template_dipole.in", files='all', data_format="GYRE", 
+                logging=False, parallel=True, n_cores=64)
 
 if __name__ == "__main__":
-    os.environ["OMP_NUM_THREADS"] = "64"
-    evo_star(name="test1", mass=1.32, metallicity=0.001, v_surf_init=2, logging=True, parallel=False, convergence_help=True)
-    evo_star(name="test2", mass=1.32, metallicity=0.001, v_surf_init=2, logging=True, parallel=False, convergence_help=False)
+    os.environ["OMP_NUM_THREADS"] = "128"
+    evo_star(name="tests_here/test1", mass=1.32, metallicity=0.002, v_surf_init=2, logging=True, parallel=False, convergence_help=True)
+    # evo_star(name="test2", mass=1.32, metallicity=0.001, v_surf_init=2, logging=True, parallel=False, convergence_help=False)
