@@ -4,7 +4,7 @@
 &model
 	model_type = 'EVOL'                 ! Obtain structure coefficient data from an evolutionary model
 
-	file='LOGS/profile00.data.GYRE'
+	file = 'LOGS/profile00.data.GYRE'
     file_format = 'MESA'              ! File format of the evolutionary model
 /
 
