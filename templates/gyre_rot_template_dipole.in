@@ -43,7 +43,7 @@
 
 	freq_min = 15
 	freq_max = 95
-	n_freq = 600
+	n_freq = 150
 /
 
 &grid
