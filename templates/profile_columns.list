@@ -549,7 +549,7 @@
 
 
 !# Rotation
-   !omega ! angular velocity = j_rot/i_rot
+   omega ! angular velocity = j_rot/i_rot
    !log_omega
    !log_j_rot
    !log_J_div_M53 ! J is j*1e-15 integrated from center; M53 is m^(5/3)
