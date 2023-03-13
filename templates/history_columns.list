@@ -671,8 +671,8 @@
       !add_log_average_abundances
 
       ! individual average mass fractions (as many as desired)
-      !average h1
-      !average he4
+      average h1
+      average he4
       ! etc.
 
       ! individual log10 average mass fractions (as many as desired)
