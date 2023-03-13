@@ -98,8 +98,8 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_p
     shutil.rmtree(name)
 
 def get_gyre_params(name, zinit):
-    histfile = f"tests_here/test_profiles/{name}/LOGS/history.data"
-    pindexfile = sorted(glob.glob(f"tests_here/test_profiles/{name}/LOGS/profiles.index"))
+    histfile = f"{name}/LOGS/history.data"
+    pindexfile = f"{name}/LOGS/profiles.index"
     h = pd.read_csv(histfile, delim_whitespace=True, skiprows=5)
     p = pd.read_csv(pindexfile, skiprows=1, names=['model_number', 'priority', 'profile_number'], delim_whitespace=True)
     h = pd.merge(h, p, on='model_number', how='outer')
@@ -118,7 +118,7 @@ def get_gyre_params(name, zinit):
         if row["log_Teff"] < 3.778:
             continue
         else:
-            profiles.append(f"tests_here/test_profiles/{name}/LOGS/profile*.data.GYRE")
+            profiles.append(f"{name}/LOGS/profile*.data.GYRE")
         try:
             muhz_to_cd = 86400/1.0E6
             mesa_dnu = row["delta_nu"]
