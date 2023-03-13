@@ -36,14 +36,18 @@
 /
 
 &scan
+	freq_units = 'CYC_PER_DAY'
+	grid_type = 'LINEAR'
+	!grid_frame = 'INERTIAL'
+
+	grid_frame = 'COROT_I'
+	freq_frame = 'COROT_I'
+
 	freq_min_units = 'CYC_PER_DAY'
 	freq_max_units = 'CYC_PER_DAY'
-	grid_type = 'LINEAR'
-	grid_frame = 'INERTIAL'
-
 	freq_min = 15
 	freq_max = 95
-	n_freq = 150
+	n_freq = 60
 /
 
 &grid
