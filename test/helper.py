@@ -150,9 +150,9 @@ def scrap_age(n):
                 age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
             else:
                 age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
-            text += f"[b][i]Model[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
+            text += f"[b][i]Track[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
-            text += f"[b][i]Model[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
+            text += f"[b][i]Track[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
     return text
 
 def progress_columns():
@@ -167,7 +167,7 @@ def progress_columns():
 
 def live_display(n):
     '''Define live display
-    Args:   n (int): number of models
+    Args:   n (int): number of tracks
     Returns:    live_disp (rich.live.Live): live display
                 progressbar (rich.progress.Progress): progress bar
                 group (rich.console.Group): group of panels
@@ -212,7 +212,7 @@ def create_grid_dirs(overwrite=None):
                     old -= 1
                 shutil.move("grid_archive", f"grid_archive_old{old}")    
     os.mkdir("grid_archive")
-    os.mkdir("grid_archive/models")
+    os.mkdir("grid_archive/tracks")
     os.mkdir("grid_archive/histories")
     os.mkdir("grid_archive/profiles")
     os.mkdir("grid_archive/gyre")
@@ -223,18 +223,18 @@ def create_grid_dirs(overwrite=None):
     os.mkdir("gridwork")
 
 
-def archive_LOGS(name, model, save_model, gyre):
+def archive_LOGS(name, track, save_track, gyre):
     path = os.path.abspath(os.path.join(os.getcwd().split("MESA-grid")[0], "MESA-grid"))
     os.chdir(path)
-    shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{model}.data")
-    shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{model}.index")
+    shutil.copy(f"{name}/LOGS/history.data", f"grid_archive/histories/history_{track}.data")
+    shutil.copy(f"{name}/LOGS/profiles.index", f"grid_archive/profiles/profiles_{track}.index")
     if gyre:
-        gyre_archive = os.path.abspath(f"grid_archive/gyre/freqs_{model}")
+        gyre_archive = os.path.abspath(f"grid_archive/gyre/freqs_{track}")
         os.mkdir(gyre_archive)
         for file in glob.glob(os.path.join(name, "LOGS/*-freqs.dat")):
             shutil.copy(file, gyre_archive)
-    if save_model:
-        compressed_file = f"grid_archive/models/model_{model}.tar.gz"
+    if save_track:
+        compressed_file = f"grid_archive/models/model_{save_track}.tar.gz"
         with tarfile.open(compressed_file, "w:gz") as tarhandle:
             tarhandle.add(name, arcname=os.path.basename(name))
     shutil.rmtree(name)

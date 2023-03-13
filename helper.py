@@ -54,8 +54,8 @@ def phases_params(initial_mass, Zinit):
                     {'initial_mass': initial_mass, 'initial_z': Zinit, 'Zbase': Zinit, 'initial_y': Yinit,
                     'initial_h1': initial_h1,'initial_h2': initial_h2, 
                     'initial_he3': initial_he3, 'initial_he4': initial_he4,
-                    'create_pre_main_sequence_track': True, 'pre_ms_T_c': 9e5,
-                    'set_initial_track_number' : True, 'initial_track_number' : 0,
+                    'create_pre_main_sequence_model': True, 'pre_ms_T_c': 9e5,
+                    'set_initial_model_number' : True, 'initial_model_number' : 0,
                     'set_uniform_initial_composition' : True, 'initial_zfracs' : 6,
                     'change_net' : True, 'new_net_name' : 'pp_and_cno_extras.net',  
                     'change_initial_net' : False, 'adjust_abundances_for_new_isos' : True,
@@ -150,9 +150,9 @@ def scrap_age(n):
                 age_str = f"[b]Age: [cyan]{age:.3f}[/cyan] years"
             else:
                 age_str = f"[b]Age: [cyan]{age:.3e}[/cyan] years"
-            text += f"[b][i]track[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
+            text += f"[b][i]Track[/i] [magenta]{num}[/magenta] [yellow]----->[/yellow] {age_str}\n"
         else:
-            text += f"[b][i]track[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
+            text += f"[b][i]Track[/i] [magenta]x[/magenta] [yellow]----->[/yellow] Initiating...\n"
     return text
 
 def progress_columns():
