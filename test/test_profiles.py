@@ -14,73 +14,75 @@ import helper
 
 
 def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_process):
+    produce_track = True
     print(f"Mass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s")
     ## Create working directory
-    proj = ProjectOps(name)     
-    proj.create(overwrite=True) 
-    star = MesaAccess(name)
-    star.load_HistoryColumns("../templates/history_columns.list")
-    star.load_ProfileColumns("../templates/profile_columns.list")
-
+    proj = ProjectOps(name)    
     initial_mass = mass
-    Zinit = metallicity
-    rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
-                            'new_rotation_flag': True,
-                            'change_initial_rotation_flag': True,
-                            'set_initial_surface_rotation_v': True,
-                            'set_surface_rotation_v': True,
-                            'new_surface_rotation_v': v_surf_init,
-                            'relax_surface_rotation_v' : True,
-                            'num_steps_to_relax_rotation' : 100, ## Default value is 100
-                            'set_uniform_am_nu_non_rot': True}
+    Zinit = metallicity 
+    if produce_track:
+        proj.create(overwrite=True) 
+        star = MesaAccess(name)
+        star.load_HistoryColumns("../templates/history_columns.list")
+        star.load_ProfileColumns("../templates/profile_columns.list")
+        rotation_init_params = {'change_rotation_flag': True,   ## False for rotation off until near zams
+                                'new_rotation_flag': True,
+                                'change_initial_rotation_flag': True,
+                                'set_initial_surface_rotation_v': True,
+                                'set_surface_rotation_v': True,
+                                'new_surface_rotation_v': v_surf_init,
+                                'relax_surface_rotation_v' : True,
+                                'num_steps_to_relax_rotation' : 100, ## Default value is 100
+                                'set_uniform_am_nu_non_rot': True}
 
-    convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead
+        convergence_helper = {"convergence_ignore_equL_residuals" : True}  ## Uses max resid dlnE_dt instead
 
-    inlist_template = "../templates/inlist_template"
-    failed = True   ## Flag to check if the run failed, if it did, we retry with age different initial mass (M+dM)
-    retry = 0
-    dM = [0, 1e-3, -1e-3, 2e-3, -2e-3]
-    while retry<len(dM) and failed:
-        proj.clean()
-        proj.make(silent=True)
-        phases_params = helper.phases_params(initial_mass, Zinit)     
-        phases_names = phases_params.keys()
-        terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
-        phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to age coarser timestep
-        for phase_name in phases_names:
-            try:
-                ## Run from inlist template by setting parameters for each phase
-                star.load_InlistProject(inlist_template)
-                print(phase_name)
-                star.set(phases_params[phase_name], force=True)
-                star.set('max_age', phase_max_age.pop(0), force=True)
-                if phase_name == "Pre-MS Evolution":
-                    ## Initiate rotation
-                    star.set(rotation_init_params, force=True)
-                    if retry>=0:
-                        star.set(convergence_helper, force=True)
-                    proj.run(logging=logging, parallel=parallel)
-                else:
-                    proj.resume(logging=logging, parallel=parallel)
-            except Exception as e:
-                failed = True
-                print(e)
-                break
-            except KeyboardInterrupt:
-                raise KeyboardInterrupt
-            else:
-                failed = False
-        if failed:
-            retry += 1
-            initial_mass = mass + dM[retry]
-            with open(f"{name}/run.log", "age+") as f:
-                if retry == len(dM)-1:
-                    f.write(f"Max retries reached. Model skipped!\n")
+        inlist_template = "../templates/inlist_template"
+        failed = True   ## Flag to check if the run failed, if it did, we retry with age different initial mass (M+dM)
+        retry = 0
+        dM = [0, 1e-3, -1e-3, 2e-3, -2e-3]
+        while retry<len(dM) and failed:
+            proj.clean()
+            proj.make(silent=True)
+            phases_params = helper.phases_params(initial_mass, Zinit)     
+            phases_names = phases_params.keys()
+            terminal_age = float(np.round(2500/initial_mass**2.5,1)*1.0E6)
+            phase_max_age = [1E6, 1E7, 4.0E7, terminal_age]         ## 1E7 is the age when we switch to age coarser timestep
+            for phase_name in phases_names:
+                try:
+                    ## Run from inlist template by setting parameters for each phase
+                    star.load_InlistProject(inlist_template)
+                    print(phase_name)
+                    star.set(phases_params[phase_name], force=True)
+                    star.set('max_age', phase_max_age.pop(0), force=True)
+                    if phase_name == "Pre-MS Evolution":
+                        ## Initiate rotation
+                        star.set(rotation_init_params, force=True)
+                        if retry>=0:
+                            star.set(convergence_helper, force=True)
+                        proj.run(logging=logging, parallel=parallel)
+                    else:
+                        proj.resume(logging=logging, parallel=parallel)
+                except Exception as e:
+                    failed = True
+                    print(e)
                     break
-                f.write(f"\nMass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
-                f.write(f"Failed at phase: {phase_name}\n")
-                f.write(f"Retrying with dM = {dM[retry]}\n")
-                f.write(f"New initial mass: {initial_mass}\n")
+                except KeyboardInterrupt:
+                    raise KeyboardInterrupt
+                else:
+                    failed = False
+            if failed:
+                retry += 1
+                initial_mass = mass + dM[retry]
+                with open(f"{name}/run.log", "age+") as f:
+                    if retry == len(dM)-1:
+                        f.write(f"Max retries reached. Model skipped!\n")
+                        break
+                    f.write(f"\nMass: {mass} MSun, Z: {metallicity}, v_init: {v_surf_init} km/s\n")
+                    f.write(f"Failed at phase: {phase_name}\n")
+                    f.write(f"Retrying with dM = {dM[retry]}\n")
+                    f.write(f"New initial mass: {initial_mass}\n")
+
     highest_density_profile = sorted(glob.glob(f"{name}/LOGS/profile*.data.GYRE"), 
                                 key=lambda x: int(os.path.basename(x).split('.')[0].split('profile')[1]))[-1]
     highest_density_profile = highest_density_profile.split('/')[-1]
@@ -88,6 +90,9 @@ def evo_star(name, mass, metallicity, v_surf_init, logging, parallel, cpu_this_p
     for i in range(len(profiles)):
         if highest_density_profile in profiles[i]:
             gyre_input_params = gyre_input_params[i]
+            break
+    
+    print(f"Running GYRE on {highest_density_profile} with params: {gyre_input_params}")
     proj.runGyre(gyre_in="../templates/gyre_rot_template_dipole.in", files=highest_density_profile, data_format="GYRE", 
                         logging=True, parallel=False, gyre_input_params=gyre_input_params)
     os.mkdir(f"tests_here/test_profiles/V_{v_surf_init}")
@@ -118,7 +123,7 @@ def get_gyre_params(name, zinit):
         if row["log_Teff"] < 3.778:
             continue
         else:
-            profiles.append(f"{name}/LOGS/profile*.data.GYRE")
+            profiles.append(f"{name}/LOGS/profile{p}.data.GYRE")
         try:
             muhz_to_cd = 86400/1.0E6
             mesa_dnu = row["delta_nu"]
